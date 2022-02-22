@@ -431,6 +431,11 @@ func populateGatewaysConfig(in *v1.HelmValues, out *v2.ControlPlaneSpec) error {
 					} else if err != nil {
 						return err
 					}
+					if routeEnabled, ok, err := gatewayValues.GetAndRemoveBool("route"); ok {
+						clusterIngress.RouteEnabled = &routeEnabled
+					} else if err != nil {
+						return err
+					}
 					gatewaysConfig.ClusterIngress = clusterIngress
 				} else if name != "istio-ilbgateway" {
 					// ilb gateway is handled by cluster config
