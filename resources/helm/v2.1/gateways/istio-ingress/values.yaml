@@ -119,6 +119,9 @@ gateways:
     # The injection template to use for the gateway. If not set, no injection will be performed.
     injectionTemplate: ""
 
+    # specifies whether to create a Route resource (route.openshift.io/v1) for the istio-ingressgateway deployment
+    route: true
+
 # Revision is set as 'version' label and part of the resource names when installing multiple control planes.
 revision: ""
 
