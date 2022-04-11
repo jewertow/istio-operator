@@ -171,7 +171,7 @@ type ControlPlaneReconciler struct {
 type ControlPlaneInstanceReconciler interface {
 	Reconcile(ctx context.Context) (reconcile.Result, error)
 	UpdateReadiness(ctx context.Context) error
-	PatchAddons(ctx context.Context) error
+	PatchAddons(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error)
 	Delete(ctx context.Context) error
 	SetInstance(instance *v2.ServiceMeshControlPlane)
 	IsFinished() bool
@@ -238,11 +238,10 @@ func (r *ControlPlaneReconciler) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	if isFullyReconciled(instance) {
-		err := reconciler.UpdateReadiness(ctx)
-		if err == nil {
-			err = reconciler.PatchAddons(ctx)
+		if err := reconciler.UpdateReadiness(ctx); err != nil {
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
+		return reconciler.PatchAddons(ctx, instance.Spec.IsGrafanaEnabled(), instance.Spec.IsJaegerEnabled())
 	}
 
 	return reconciler.Reconcile(ctx)

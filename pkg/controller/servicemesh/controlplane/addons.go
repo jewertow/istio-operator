@@ -3,6 +3,7 @@ package controlplane
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
@@ -11,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/maistra/istio-operator/pkg/apis/external"
 	kialiv1alpha1 "github.com/maistra/istio-operator/pkg/apis/external/kiali/v1alpha1"
@@ -19,14 +21,14 @@ import (
 	"github.com/maistra/istio-operator/pkg/controller/common"
 )
 
-func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context) error {
+func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error) {
 	// so far, only need to patch kiali
-	return r.patchKiali(ctx)
+	return r.patchKiali(ctx, grafanaEnabled, jaegerEnabled)
 }
 
-func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context) error {
+func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error) {
 	if r.Instance == nil || !r.Instance.Status.AppliedSpec.IsKialiEnabled() {
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	log := common.LogFromContext(ctx)
@@ -38,9 +40,9 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context) error {
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: kialiConfig.ResourceName(), Namespace: r.Instance.Namespace}, kiali); err != nil {
 		if errors.IsNotFound(err) || errors.IsGone(err) {
 			log.Error(nil, fmt.Sprintf("could not patch kiali CR, %s/%s does not exist", r.Instance.Namespace, kialiConfig.ResourceName()))
-			return nil
+			return reconcile.Result{}, nil
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 	log.Info("patching kiali CR", kiali.Kind, kiali.GetName())
 
@@ -61,40 +63,40 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context) error {
 	// grafana
 	grafanaURL, err := r.grafanaURL(ctx, log)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	} else if grafanaURL == "" {
 		// disable grafana
 		if err := updatedKiali.Spec.SetField("external_services.grafana.enabled", false); err != nil {
-			return fmt.Errorf("could not set external_services.grafana.enabled in kiali CR: %s", err)
+			return reconcile.Result{}, fmt.Errorf("could not set external_services.grafana.enabled in kiali CR: %s", err)
 		}
 	} else {
 		// enable grafana and set URL
 		// XXX: should we also configure the in_cluster_url
 		if err := updatedKiali.Spec.SetField("external_services.grafana.url", grafanaURL); err != nil {
-			return fmt.Errorf("could not set external_services.grafana.url in kiali CR: %s", err)
+			return reconcile.Result{}, fmt.Errorf("could not set external_services.grafana.url in kiali CR: %s", err)
 		}
 		if err := updatedKiali.Spec.SetField("external_services.grafana.enabled", true); err != nil {
-			return fmt.Errorf("could not set external_services.grafana.enabled in kiali CR: %s", err)
+			return reconcile.Result{}, fmt.Errorf("could not set external_services.grafana.enabled in kiali CR: %s", err)
 		}
 	}
 
 	// jaeger
 	jaegerURL, err := r.jaegerURL(ctx, log)
 	if err != nil {
-		return nil
+		return reconcile.Result{}, nil
 	} else if jaegerURL == "" {
 		// disable jaeger
 		if err := updatedKiali.Spec.SetField("external_services.tracing.enabled", false); err != nil {
-			return fmt.Errorf("could not set external_services.tracing.enabled in kiali CR: %s", err)
+			return reconcile.Result{}, fmt.Errorf("could not set external_services.tracing.enabled in kiali CR: %s", err)
 		}
 	} else {
 		// enable jaeger and set URL
 		// XXX: should we also configure the in_cluster_url
 		if err := updatedKiali.Spec.SetField("external_services.tracing.url", jaegerURL); err != nil {
-			return fmt.Errorf("could not set external_services.tracing.url in kiali CR: %s", err)
+			return reconcile.Result{}, fmt.Errorf("could not set external_services.tracing.url in kiali CR: %s", err)
 		}
 		if err := updatedKiali.Spec.SetField("external_services.tracing.enabled", true); err != nil {
-			return fmt.Errorf("could not set external_services.tracing.enabled in kiali CR: %s", err)
+			return reconcile.Result{}, fmt.Errorf("could not set external_services.tracing.enabled in kiali CR: %s", err)
 		}
 	}
 
@@ -103,16 +105,16 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context) error {
 	// credentials
 	rawPassword, err := r.getRawHtPasswd(ctx)
 	if err != nil {
-		return fmt.Errorf("could not get htpasswd required for kiali external_serivces: %s", err)
+		return reconcile.Result{}, fmt.Errorf("could not get htpasswd required for kiali external_serivces: %s", err)
 	}
 	if err := updatedKiali.Spec.SetField("external_services.grafana.auth.password", rawPassword); err != nil {
-		return fmt.Errorf("could not set external_services.grafana.auth.password in kiali CR: %s", err)
+		return reconcile.Result{}, fmt.Errorf("could not set external_services.grafana.auth.password in kiali CR: %s", err)
 	}
 	if err := updatedKiali.Spec.SetField("external_services.prometheus.auth.password", rawPassword); err != nil {
-		return fmt.Errorf("could not set external_services.prometheus.auth.password in kiali CR: %s", err)
+		return reconcile.Result{}, fmt.Errorf("could not set external_services.prometheus.auth.password in kiali CR: %s", err)
 	}
 	if err := updatedKiali.Spec.SetField("external_services.tracing.auth.password", rawPassword); err != nil {
-		return fmt.Errorf("could not set external_services.tracing.auth.password in kiali CR: %s", err)
+		return reconcile.Result{}, fmt.Errorf("could not set external_services.tracing.auth.password in kiali CR: %s", err)
 	}
 
 	// FUTURE: add support for synchronizing kiali version with control plane version
@@ -120,12 +122,17 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context) error {
 	if err := r.Client.Patch(ctx, updatedKiali, client.Merge); err != nil {
 		if meta.IsNoMatchError(err) || errors.IsNotFound(err) || errors.IsGone(err) {
 			log.Info(fmt.Sprintf("skipping kiali update, %s/%s is no longer available", kiali.GetNamespace(), kiali.GetName()))
-			return nil
+			return reconcile.Result{}, nil
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 
-	return nil
+	// SMCP should be reconciled if Grafana or Jaeger are enabled, but there are no routes for these services
+	if (grafanaEnabled && grafanaURL == "") || (jaegerEnabled && jaegerURL == "") {
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func (r *controlPlaneInstanceReconciler) grafanaURL(ctx context.Context, log logr.Logger) (string, error) {

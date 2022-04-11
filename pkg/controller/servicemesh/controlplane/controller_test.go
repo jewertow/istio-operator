@@ -159,9 +159,9 @@ func (r *fakeInstanceReconciler) UpdateReadiness(ctx context.Context) error {
 	return nil
 }
 
-func (r *fakeInstanceReconciler) PatchAddons(ctx context.Context) error {
+func (r *fakeInstanceReconciler) PatchAddons(ctx context.Context, _, _ bool) (reconcile.Result, error) {
 	r.updateReadinessInvoked = true
-	return nil
+	return reconcile.Result{}, nil
 }
 
 func (r *fakeInstanceReconciler) Delete(ctx context.Context) error {
