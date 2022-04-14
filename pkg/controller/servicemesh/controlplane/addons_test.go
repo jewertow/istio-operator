@@ -447,12 +447,9 @@ func TestPatchAddonsResult(t *testing.T) {
 		smcp := New21SMCPResource("basic", "istio-system", smcpSpec)
 		smcp.Status = maistrav2.ControlPlaneStatus{AppliedSpec: *smcpSpec}
 
-		kialiGroupVersion := schema.GroupVersion{
-			Group:   "kiali.io",
-			Version: "v1alpha1",
-		}
 		s := scheme.Scheme
-		s.AddKnownTypes(kialiGroupVersion, &kialiv1alpha1.Kiali{}, &routev1.Route{}, &routev1.RouteList{})
+		configureKialiAPI(s)
+		configureRouteAPI(s)
 
 		c := fake.NewFakeClientWithScheme(s, tc.objects...)
 		r := newReconciler(c, s, &record.FakeRecorder{}, "istio-operator", cni.Config{Enabled: true})
@@ -543,6 +540,22 @@ func newJaegerRoute(hostname string) *routev1.Route {
 			Host: hostname,
 		},
 	}
+}
+
+func configureKialiAPI(s *runtime.Scheme) {
+	kialiGroupVersion := schema.GroupVersion{
+		Group:   "kiali.io",
+		Version: "v1alpha1",
+	}
+	s.AddKnownTypes(kialiGroupVersion, &kialiv1alpha1.Kiali{})
+}
+
+func configureRouteAPI(s *runtime.Scheme) {
+	routeGroupVersion := schema.GroupVersion{
+		Group:   "route.openshift.io",
+		Version: "v1",
+	}
+	s.AddKnownTypes(routeGroupVersion, &routev1.Route{}, &routev1.RouteList{})
 }
 
 func toString(r reconcile.Result) string {
