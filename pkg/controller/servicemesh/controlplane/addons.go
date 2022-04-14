@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	maistrav2 "github.com/maistra/istio-operator/pkg/apis/maistra/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -17,13 +18,12 @@ import (
 	"github.com/maistra/istio-operator/pkg/apis/external"
 	kialiv1alpha1 "github.com/maistra/istio-operator/pkg/apis/external/kiali/v1alpha1"
 	v1 "github.com/maistra/istio-operator/pkg/apis/maistra/v1"
-	v2 "github.com/maistra/istio-operator/pkg/apis/maistra/v2"
 	"github.com/maistra/istio-operator/pkg/controller/common"
 )
 
-func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error) {
+func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, spec *maistrav2.ControlPlaneSpec) (reconcile.Result, error) {
 	// so far, only need to patch kiali
-	return r.patchKiali(ctx, grafanaEnabled, jaegerEnabled)
+	return r.patchKiali(ctx, spec.IsGrafanaEnabled(), spec.IsJaegerEnabled())
 }
 
 func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error) {
@@ -151,8 +151,7 @@ func (r *controlPlaneInstanceReconciler) grafanaURL(ctx context.Context, log log
 
 func (r *controlPlaneInstanceReconciler) jaegerURL(ctx context.Context, log logr.Logger) (string, error) {
 	log.Info("attempting to auto-detect Jaeger for Kiali")
-	if r.Instance.Status.AppliedSpec.Addons == nil ||
-		r.Instance.Status.AppliedSpec.Tracing.Type != v2.TracerTypeJaeger {
+	if r.Instance.Status.AppliedSpec.Addons == nil || !r.Instance.Status.AppliedSpec.IsJaegerEnabled() {
 		log.Info("Jaeger is not installed, disabling tracing in Kiali")
 		return "", nil
 	}
