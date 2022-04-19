@@ -477,12 +477,12 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 	configureKialiAPI(s)
 	configureRouteAPI(s)
 
+	// there is no Jaeger route, so reconciliation should be repeated
 	expectedObjects := []runtime.Object{
 		newKiali(),
 		newHtpasswd(),
 		newGrafanaRoute("grafana.istio-system.svc.cluster.local"),
 	}
-
 	c := fake.NewFakeClientWithScheme(s, expectedObjects...)
 	r := newReconciler(c, s, &record.FakeRecorder{}, "istio-operator", cni.Config{Enabled: true})
 	r.instanceReconcilerFactory = NewControlPlaneInstanceReconciler
@@ -491,7 +491,7 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 	maxBackoffReached := false
 	maxBackoff := reconcile.Result{RequeueAfter: backoffMaxDuration}
 	i := 0
-	// PatchAddons should return result with increasing timeout
+	// timeout should be increased every time the PatchAddons function is called until the max timeout is reached
 	for !maxBackoffReached {
 		res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
 
