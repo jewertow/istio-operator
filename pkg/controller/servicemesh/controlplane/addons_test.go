@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"testing"
 	"time"
@@ -464,6 +465,62 @@ func TestPatchAddonsResult(t *testing.T) {
 		if err != tc.expecterError {
 			t.Fatalf("expected to get [%v], but got: [%v]", tc.expecterError, err)
 		}
+	}
+}
+
+func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
+	smcpSpec := newSmcpSpec(true, true, true)
+	smcp := New21SMCPResource("basic", "istio-system", smcpSpec)
+	smcp.Status = maistrav2.ControlPlaneStatus{AppliedSpec: *smcpSpec}
+
+	s := scheme.Scheme
+	configureKialiAPI(s)
+	configureRouteAPI(s)
+
+	expectedObjects := []runtime.Object{
+		newKiali(),
+		newHtpasswd(),
+		newGrafanaRoute("grafana.istio-system.svc.cluster.local"),
+	}
+
+	c := fake.NewFakeClientWithScheme(s, expectedObjects...)
+	r := newReconciler(c, s, &record.FakeRecorder{}, "istio-operator", cni.Config{Enabled: true})
+	r.instanceReconcilerFactory = NewControlPlaneInstanceReconciler
+	_, smcpReconciler := r.getOrCreateReconciler(smcp)
+
+	maxBackoffReached := false
+	maxBackoff := reconcile.Result{RequeueAfter: backoffMaxDuration}
+	i := 0
+	// PatchAddons should return result with increasing timeout
+	for !maxBackoffReached {
+		res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res == maxBackoff {
+			maxBackoffReached = true
+			break
+		}
+
+		expectedBackoff := math.Pow(2, float64(i)) * backoffIntervalMultiplier
+		expectedResult := reconcile.Result{
+			RequeueAfter: time.Duration(expectedBackoff) * time.Second,
+		}
+		if res != expectedResult {
+			t.Fatalf("expected to get result [%s], but got [%s]; iteration: %d", toString(expectedResult), toString(res), i)
+		}
+		i++
+	}
+
+	// timeout should not be increased after reaching the maximum duration
+	res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
+	expectedResult := reconcile.Result{RequeueAfter: backoffMaxDuration}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res != expectedResult {
+		t.Fatalf("expected to get result [%s], but got [%s]", toString(expectedResult), toString(res))
 	}
 }
 

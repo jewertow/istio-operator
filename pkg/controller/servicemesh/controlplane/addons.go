@@ -3,8 +3,6 @@ package controlplane
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/go-logr/logr"
 	maistrav2 "github.com/maistra/istio-operator/pkg/apis/maistra/v2"
 	routev1 "github.com/openshift/api/route/v1"
@@ -26,6 +24,7 @@ func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, spec *
 	return r.patchKiali(ctx, spec.IsGrafanaEnabled(), spec.IsJaegerEnabled())
 }
 
+// TODO: Comment
 func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error) {
 	if r.Instance == nil || !r.Instance.Status.AppliedSpec.IsKialiEnabled() {
 		return reconcile.Result{}, nil
@@ -129,7 +128,9 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafana
 
 	// SMCP should be reconciled if Grafana or Jaeger are enabled, but there are no routes for these services
 	if (grafanaEnabled && grafanaURL == "") || (jaegerEnabled && jaegerURL == "") {
-		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
+		return reconcile.Result{
+			RequeueAfter: r.backoff.Duration(),
+		}, nil
 	}
 
 	return reconcile.Result{}, nil
