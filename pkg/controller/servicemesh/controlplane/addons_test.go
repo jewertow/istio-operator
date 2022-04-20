@@ -21,7 +21,6 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -482,7 +481,7 @@ func TestPatchAddonsResult(t *testing.T) {
 		configureKialiAPI(s)
 		configureRouteAPI(s)
 
-		c := fake.NewFakeClientWithScheme(s, tc.objects...)
+		c, _ := CreateClientWithScheme(s, tc.objects...)
 		r := newReconciler(c, s, &record.FakeRecorder{}, "istio-operator", cni.Config{Enabled: true})
 		r.instanceReconcilerFactory = NewControlPlaneInstanceReconciler
 
