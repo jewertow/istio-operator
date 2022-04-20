@@ -378,6 +378,10 @@ func VerifyKialiUpdate(jaegerName, domain string, values *maistrav1.HelmValues) 
 
 func TestPatchAddonsResult(t *testing.T) {
 	requeueWithTimeout := reconcile.Result{RequeueAfter: backoffInterval}
+	kiali := newKiali()
+	htpasswd := newHtpasswd()
+	grafanaRoute := newGrafanaRoute("grafana.istio-system.svc.cluster.local")
+	jaegerRoute := newJaegerRoute("jaeger-query.istio-system.svc.cluster.local")
 
 	testCases := []struct {
 		name                         string
@@ -386,45 +390,14 @@ func TestPatchAddonsResult(t *testing.T) {
 		jaegerEnabled                bool
 		objects                      []runtime.Object
 		expectedReconciliationResult reconcile.Result
-		expecterError                error
 	}{
 		{
-			name:           "should requeue reconciliation with timeout when jaeger and grafana are enabled, but their routes do not exist",
-			kialiEnabled:   true,
-			grafanaEnabled: true,
-			jaegerEnabled:  true,
-			objects: []runtime.Object{
-				newKiali(),
-				newHtpasswd(),
-			},
-			expectedReconciliationResult: requeueWithTimeout,
-			expecterError:                nil,
-		},
-		{
-			name:           "should requeue reconciliation with timeout when jaeger and grafana are enabled, but jaeger route does not exist",
-			kialiEnabled:   true,
-			grafanaEnabled: true,
-			jaegerEnabled:  true,
-			objects: []runtime.Object{
-				newKiali(),
-				newHtpasswd(),
-				newGrafanaRoute("grafana.istio-system.svc.cluster.local"),
-			},
-			expectedReconciliationResult: requeueWithTimeout,
-			expecterError:                nil,
-		},
-		{
-			name:           "should requeue reconciliation with timeout when jaeger and grafana are enabled, but grafana route does not exist",
-			kialiEnabled:   true,
-			grafanaEnabled: true,
-			jaegerEnabled:  true,
-			objects: []runtime.Object{
-				newKiali(),
-				newHtpasswd(),
-				newJaegerRoute("jaeger-query.istio-system.svc.cluster.local"),
-			},
-			expectedReconciliationResult: requeueWithTimeout,
-			expecterError:                nil,
+			name:                         "reconciliation should succeed when Kiali is disabled",
+			kialiEnabled:                 false,
+			grafanaEnabled:               true,
+			jaegerEnabled:                true,
+			objects:                      []runtime.Object{},
+			expectedReconciliationResult: reconcile.Result{},
 		},
 		{
 			name:           "reconciliation should succeed when jaeger and grafana are enabled and their routes exist",
@@ -432,13 +405,71 @@ func TestPatchAddonsResult(t *testing.T) {
 			grafanaEnabled: true,
 			jaegerEnabled:  true,
 			objects: []runtime.Object{
-				newKiali(),
-				newHtpasswd(),
-				newGrafanaRoute("grafana.istio-system.svc.cluster.local"),
-				newJaegerRoute("jaeger-query.istio-system.svc.cluster.local"),
+				kiali,
+				htpasswd,
+				grafanaRoute,
+				jaegerRoute,
 			},
 			expectedReconciliationResult: reconcile.Result{},
-			expecterError:                nil,
+		},
+		{
+			name:           "reconciliation should succeed when jaeger is disabled and there is no its route",
+			kialiEnabled:   true,
+			grafanaEnabled: true,
+			jaegerEnabled:  false,
+			objects: []runtime.Object{
+				kiali,
+				htpasswd,
+				grafanaRoute,
+			},
+			expectedReconciliationResult: reconcile.Result{},
+		},
+		{
+			name:           "reconciliation should succeed when grafana is disabled and there is no its route",
+			kialiEnabled:   true,
+			grafanaEnabled: false,
+			jaegerEnabled:  true,
+			objects: []runtime.Object{
+				kiali,
+				htpasswd,
+				jaegerRoute,
+			},
+			expectedReconciliationResult: reconcile.Result{},
+		},
+		{
+			name:           "should requeue reconciliation with timeout when jaeger and grafana are enabled, but their routes do not exist",
+			kialiEnabled:   true,
+			grafanaEnabled: true,
+			jaegerEnabled:  true,
+			objects: []runtime.Object{
+				kiali,
+				htpasswd,
+			},
+			expectedReconciliationResult: requeueWithTimeout,
+		},
+		{
+			name:           "should requeue reconciliation with timeout when jaeger and grafana are enabled, but jaeger route does not exist",
+			kialiEnabled:   true,
+			grafanaEnabled: true,
+			jaegerEnabled:  true,
+			objects: []runtime.Object{
+				kiali,
+				htpasswd,
+				grafanaRoute,
+			},
+			expectedReconciliationResult: requeueWithTimeout,
+		},
+		{
+			name:           "should requeue reconciliation with timeout when jaeger and grafana are enabled, but grafana route does not exist",
+			kialiEnabled:   true,
+			grafanaEnabled: true,
+			jaegerEnabled:  true,
+			objects: []runtime.Object{
+				kiali,
+				htpasswd,
+				jaegerRoute,
+			},
+			expectedReconciliationResult: requeueWithTimeout,
 		},
 	}
 
@@ -458,7 +489,7 @@ func TestPatchAddonsResult(t *testing.T) {
 		_, smcpReconciler := r.getOrCreateReconciler(smcp)
 		res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
 
-		assert.Equals(err, tc.expecterError, "unexpected error occurred", t)
+		assert.Nil(err, "unexpected error occurred", t)
 		assert.Equals(res, tc.expectedReconciliationResult, "unexpected reconciliation result", t)
 	}
 }
