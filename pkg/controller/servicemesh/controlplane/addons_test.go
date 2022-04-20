@@ -378,7 +378,7 @@ func VerifyKialiUpdate(jaegerName, domain string, values *maistrav1.HelmValues) 
 }
 
 func TestPatchAddonsResult(t *testing.T) {
-	requeueWithTimeout := reconcile.Result{RequeueAfter: 5 * time.Second}
+	requeueWithTimeout := reconcile.Result{RequeueAfter: backoffInterval}
 
 	testCases := []struct {
 		name                         string
