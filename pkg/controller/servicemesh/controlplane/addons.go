@@ -3,8 +3,8 @@ package controlplane
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
-	maistrav2 "github.com/maistra/istio-operator/pkg/apis/maistra/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -15,11 +15,12 @@ import (
 
 	"github.com/maistra/istio-operator/pkg/apis/external"
 	kialiv1alpha1 "github.com/maistra/istio-operator/pkg/apis/external/kiali/v1alpha1"
-	v1 "github.com/maistra/istio-operator/pkg/apis/maistra/v1"
+	"github.com/maistra/istio-operator/pkg/apis/maistra/v1"
+	"github.com/maistra/istio-operator/pkg/apis/maistra/v2"
 	"github.com/maistra/istio-operator/pkg/controller/common"
 )
 
-func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, spec *maistrav2.ControlPlaneSpec) (reconcile.Result, error) {
+func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, spec *v2.ControlPlaneSpec) (reconcile.Result, error) {
 	// so far, only need to patch kiali
 	return r.patchKiali(ctx, spec.IsGrafanaEnabled(), spec.IsJaegerEnabled())
 }
