@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -483,7 +484,11 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 		newHtpasswd(),
 		newGrafanaRoute("grafana.istio-system.svc.cluster.local"),
 	}
-	c := fake.NewFakeClientWithScheme(s, expectedObjects...)
+
+	var c client.Client
+	var tracker *EnhancedTracker
+	c, tracker = CreateClientWithScheme(s, expectedObjects...)
+
 	r := newReconciler(c, s, &record.FakeRecorder{}, "istio-operator", cni.Config{Enabled: true})
 	r.instanceReconcilerFactory = NewControlPlaneInstanceReconciler
 	_, smcpReconciler := r.getOrCreateReconciler(smcp)
@@ -516,6 +521,37 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 	// timeout should not be increased after reaching the maximum duration
 	res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
 	expectedResult := reconcile.Result{RequeueAfter: backoffMaxDuration}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res != expectedResult {
+		t.Fatalf("expected to get result [%s], but got [%s]", toString(expectedResult), toString(res))
+	}
+
+	// simulate that Jaeger route becomes available
+	jaegerRoute := newJaegerRoute("jaeger-query.istio-system.svc.cluster.local")
+	if err := tracker.Add(jaegerRoute); err != nil {
+		t.Fatalf("Failed to add Jaeger route to the runtime object tracker")
+	}
+
+	// timeout should not be increased after reaching the maximum duration
+	res, err = smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
+	expectedResult = reconcile.Result{}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res != expectedResult {
+		t.Fatalf("expected to get result [%s], but got [%s]", toString(expectedResult), toString(res))
+	}
+
+	// simulate that Jaeger route becomes unavailable
+	if err := tracker.Delete(routeGVR, jaegerRoute.Namespace, jaegerRoute.Name); err != nil {
+		t.Fatalf("Failed to delete Jaeger route from the runtime object tracker: %v", err)
+	}
+
+	// timeout should not be reset
+	res, err = smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
+	expectedResult = reconcile.Result{RequeueAfter: backoffInterval}
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -620,4 +656,10 @@ func toString(r reconcile.Result) string {
 		return "reconcile.Result{}"
 	}
 	return fmt.Sprintf("reconcile.Result{Requeue: %t, RequeuAfter: %d}", r.Requeue, r.RequeueAfter)
+}
+
+var routeGVR = schema.GroupVersionResource{
+	Group:    "route.openshift.io",
+	Version:  "v1",
+	Resource: "routes",
 }

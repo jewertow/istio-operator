@@ -132,6 +132,7 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafana
 			RequeueAfter: r.backoff.Duration(),
 		}, nil
 	}
+	r.backoff.Reset()
 
 	return reconcile.Result{}, nil
 }
