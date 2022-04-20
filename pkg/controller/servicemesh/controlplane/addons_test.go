@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/maistra/istio-operator/pkg/controller/common/test/assert"
 	"math"
 	"os"
 	"testing"
@@ -39,9 +40,6 @@ import (
 
 var featureEnabled = maistrav2.Enablement{
 	Enabled: ptrTrue,
-}
-var featureDisabled = maistrav2.Enablement{
-	Enabled: ptrFalse,
 }
 
 func TestAddonsInstall(t *testing.T) {
@@ -460,12 +458,8 @@ func TestPatchAddonsResult(t *testing.T) {
 		_, smcpReconciler := r.getOrCreateReconciler(smcp)
 		res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
 
-		if res != tc.expectedReconciliationResult {
-			t.Fatalf("expected to get %s, but got: %s", toString(tc.expectedReconciliationResult), toString(res))
-		}
-		if err != tc.expecterError {
-			t.Fatalf("expected to get [%v], but got: [%v]", tc.expecterError, err)
-		}
+		assert.Equals(err, tc.expecterError, "unexpected error occurred", t)
+		assert.Equals(res, tc.expectedReconciliationResult, "unexpected reconciliation result", t)
 	}
 }
 
@@ -500,9 +494,7 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 	for !maxBackoffReached {
 		res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
 
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		assert.Nil(err, "unexpected error", t)
 		if res == maxBackoff {
 			maxBackoffReached = true
 			break
@@ -512,21 +504,14 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 		expectedResult := reconcile.Result{
 			RequeueAfter: time.Duration(backoffMultiplier) * backoffInterval,
 		}
-		if res != expectedResult {
-			t.Fatalf("expected to get result [%s], but got [%s]; iteration: %d", toString(expectedResult), toString(res), i)
-		}
+		assert.Equals(res, expectedResult, fmt.Sprintf("unexpected reconciliation result; iteration: %d", i), t)
 		i++
 	}
 
 	// timeout should not be increased after reaching the maximum duration
 	res, err := smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
-	expectedResult := reconcile.Result{RequeueAfter: backoffMaxDuration}
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if res != expectedResult {
-		t.Fatalf("expected to get result [%s], but got [%s]", toString(expectedResult), toString(res))
-	}
+	assert.Nil(err, "unexpected error", t)
+	assert.Equals(res, maxBackoff, "unexpected reconciliation result", t)
 
 	// simulate that Jaeger route becomes available
 	jaegerRoute := newJaegerRoute("jaeger-query.istio-system.svc.cluster.local")
@@ -534,30 +519,20 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 		t.Fatalf("Failed to add Jaeger route to the runtime object tracker")
 	}
 
-	// timeout should not be increased after reaching the maximum duration
+	// reconciliation should succeed once Jaeger route becomes available
 	res, err = smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
-	expectedResult = reconcile.Result{}
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if res != expectedResult {
-		t.Fatalf("expected to get result [%s], but got [%s]", toString(expectedResult), toString(res))
-	}
+	assert.Nil(err, "unexpected error", t)
+	assert.Equals(res, reconcile.Result{}, "unexpected reconciliation result", t)
 
 	// simulate that Jaeger route becomes unavailable
 	if err := tracker.Delete(routeGVR, jaegerRoute.Namespace, jaegerRoute.Name); err != nil {
 		t.Fatalf("Failed to delete Jaeger route from the runtime object tracker: %v", err)
 	}
 
-	// timeout should not be reset
+	// reconciliation should be requeued with timeout reset to the initial value
 	res, err = smcpReconciler.PatchAddons(context.TODO(), &smcp.Spec)
-	expectedResult = reconcile.Result{RequeueAfter: backoffInterval}
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if res != expectedResult {
-		t.Fatalf("expected to get result [%s], but got [%s]", toString(expectedResult), toString(res))
-	}
+	assert.Nil(err, "unexpected error", t)
+	assert.Equals(res, reconcile.Result{RequeueAfter: backoffInterval}, "unexpected reconciliation result", t)
 }
 
 func newSmcpSpec(kialiEnabled, grafanaEnabled, jaegerEnabled bool) *maistrav2.ControlPlaneSpec {
@@ -649,13 +624,6 @@ func configureRouteAPI(s *runtime.Scheme) {
 		Version: "v1",
 	}
 	s.AddKnownTypes(routeGroupVersion, &routev1.Route{}, &routev1.RouteList{})
-}
-
-func toString(r reconcile.Result) string {
-	if !r.Requeue && r.RequeueAfter == 0 {
-		return "reconcile.Result{}"
-	}
-	return fmt.Sprintf("reconcile.Result{Requeue: %t, RequeuAfter: %d}", r.Requeue, r.RequeueAfter)
 }
 
 var routeGVR = schema.GroupVersionResource{
