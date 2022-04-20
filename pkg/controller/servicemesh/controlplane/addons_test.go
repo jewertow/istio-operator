@@ -503,9 +503,9 @@ func TestPatchAddonsReconciliationWithExponentialBackoff(t *testing.T) {
 			break
 		}
 
-		expectedBackoff := math.Pow(2, float64(i)) * backoffIntervalMultiplier
+		backoffMultiplier := math.Pow(2, float64(i))
 		expectedResult := reconcile.Result{
-			RequeueAfter: time.Duration(expectedBackoff) * time.Second,
+			RequeueAfter: time.Duration(backoffMultiplier) * backoffInterval,
 		}
 		if res != expectedResult {
 			t.Fatalf("expected to get result [%s], but got [%s]; iteration: %d", toString(expectedResult), toString(res), i)
