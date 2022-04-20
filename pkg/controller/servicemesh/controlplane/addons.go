@@ -24,7 +24,6 @@ func (r *controlPlaneInstanceReconciler) PatchAddons(ctx context.Context, spec *
 	return r.patchKiali(ctx, spec.IsGrafanaEnabled(), spec.IsJaegerEnabled())
 }
 
-// TODO: Comment
 func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafanaEnabled, jaegerEnabled bool) (reconcile.Result, error) {
 	if r.Instance == nil || !r.Instance.Status.AppliedSpec.IsKialiEnabled() {
 		return reconcile.Result{}, nil

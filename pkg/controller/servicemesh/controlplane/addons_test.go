@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/maistra/istio-operator/pkg/controller/common/test/assert"
 	"math"
 	"os"
 	"testing"
@@ -34,6 +33,7 @@ import (
 	maistrav2 "github.com/maistra/istio-operator/pkg/apis/maistra/v2"
 	"github.com/maistra/istio-operator/pkg/controller/common/cni"
 	. "github.com/maistra/istio-operator/pkg/controller/common/test"
+	"github.com/maistra/istio-operator/pkg/controller/common/test/assert"
 	"github.com/maistra/istio-operator/pkg/controller/versions"
 	routev1 "github.com/openshift/api/route/v1"
 )
