@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudflare/backoff"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +43,7 @@ type controlPlaneInstanceReconciler struct {
 	renderings        map[string][]manifest.Manifest
 	waitForComponents sets.String
 	cniConfig         cni.Config
-	backoff           *backoff.Backoff
+	backoff           *common.Backoff
 }
 
 // ensure controlPlaneInstanceReconciler implements ControlPlaneInstanceReconciler
@@ -76,7 +75,7 @@ func NewControlPlaneInstanceReconciler(controllerResources common.ControllerReso
 		Instance:            newInstance,
 		Status:              newInstance.Status.DeepCopy(),
 		cniConfig:           cniConfig,
-		backoff:             backoff.NewWithoutJitter(backoffMaxDuration, backoffInterval),
+		backoff:             common.NewBackoff(backoffInterval, backoffMaxDuration),
 	}
 }
 
