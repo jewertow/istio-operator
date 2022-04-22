@@ -9,7 +9,7 @@ import (
 )
 
 type Backoff struct {
-	backoff *wait.Backoff
+	backoff wait.Backoff
 	mux     sync.Mutex
 
 	interval    time.Duration
@@ -17,17 +17,12 @@ type Backoff struct {
 }
 
 func NewBackoff(interval, maxDuration time.Duration) *Backoff {
-	return &Backoff{
-		backoff: &wait.Backoff{
-			Duration: interval,
-			Factor:   2,
-			Steps:    math.MaxInt32,
-			Cap:      maxDuration,
-		},
-		mux:         sync.Mutex{},
+	backoff := &Backoff{
 		interval:    interval,
 		maxDuration: maxDuration,
 	}
+	backoff.Reset()
+	return backoff
 }
 
 func (b *Backoff) Step() time.Duration {
