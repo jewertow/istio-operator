@@ -412,7 +412,7 @@ func TestPatchAddonsResult(t *testing.T) {
 			expectedReconciliationResult: reconcile.Result{},
 		},
 		{
-			name:           "reconciliation should succeed when jaeger is disabled and there is no its route",
+			name:           "reconciliation should succeed when jaeger is disabled and its route does not exist",
 			kialiEnabled:   true,
 			grafanaEnabled: true,
 			jaegerEnabled:  false,
@@ -424,7 +424,7 @@ func TestPatchAddonsResult(t *testing.T) {
 			expectedReconciliationResult: reconcile.Result{},
 		},
 		{
-			name:           "reconciliation should succeed when grafana is disabled and there is no its route",
+			name:           "reconciliation should succeed when grafana is disabled and its route does not exist",
 			kialiEnabled:   true,
 			grafanaEnabled: false,
 			jaegerEnabled:  true,
