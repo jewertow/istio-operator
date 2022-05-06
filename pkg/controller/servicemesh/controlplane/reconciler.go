@@ -52,7 +52,7 @@ var _ ControlPlaneInstanceReconciler = &controlPlaneInstanceReconciler{}
 const (
 	// Reconciliation backoff settings
 	backoffMaxDuration = 3 * time.Minute
-	backoffInterval    = 10 * time.Millisecond
+	backoffInterval    = 1 * time.Minute
 	// Event reasons
 	eventReasonInstalling              = "Installing"
 	eventReasonPausingInstall          = "PausingInstall"
