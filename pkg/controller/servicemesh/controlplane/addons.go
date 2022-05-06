@@ -129,10 +129,10 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafana
 	// SMCP should be reconciled if Grafana or Jaeger are enabled, but there are no routes for these services
 	if (grafanaEnabled && grafanaURL == "") || (jaegerEnabled && jaegerURL == "") {
 		return reconcile.Result{
-			RequeueAfter: r.backoff.Step(),
+			RequeueAfter: r.patchKialiBackoff.Step(),
 		}, nil
 	}
-	r.backoff.Reset()
+	r.patchKialiBackoff.Reset()
 
 	return reconcile.Result{}, nil
 }

@@ -43,7 +43,7 @@ type controlPlaneInstanceReconciler struct {
 	renderings        map[string][]manifest.Manifest
 	waitForComponents sets.String
 	cniConfig         cni.Config
-	backoff           *common.Backoff
+	patchKialiBackoff *common.Backoff
 }
 
 // ensure controlPlaneInstanceReconciler implements ControlPlaneInstanceReconciler
@@ -75,7 +75,7 @@ func NewControlPlaneInstanceReconciler(controllerResources common.ControllerReso
 		Instance:            newInstance,
 		Status:              newInstance.Status.DeepCopy(),
 		cniConfig:           cniConfig,
-		backoff:             common.NewBackoff(backoffInterval, backoffMaxDuration),
+		patchKialiBackoff:   common.NewBackoff(backoffInterval, backoffMaxDuration),
 	}
 }
 
