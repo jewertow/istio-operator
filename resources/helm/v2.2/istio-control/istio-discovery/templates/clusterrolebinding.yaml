@@ -4,7 +4,7 @@ metadata:
   name: istiod-clusterrole-{{ .Values.revision | default "default" }}-{{ .Release.Namespace }}
   namespace: {{ .Release.Namespace }}
   labels:
-    maistra-version: "2.2.1"
+    maistra-version: "2.2.2"
     app: istiod
     release: {{ .Release.Name }}
 roleRef:
@@ -21,8 +21,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: istiod-gateway-controller-{{ .Values.revision | default "default" }}-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
-    maistra-version: "2.2.1"
+    maistra-version: "2.2.2"
     app: istiod
     release: {{ .Release.Name }}
 roleRef:

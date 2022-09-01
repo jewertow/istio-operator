@@ -2,7 +2,7 @@
 {{- range $index, $container := .Spec.Containers }}{{ if not (eq $container.Name "istio-proxy") }}{{ $containers = append $containers $container.Name }}{{end}}{{- end}}
 metadata:
   labels:
-    maistra-version: "2.2.1"
+    maistra-version: "2.2.2"
     service.istio.io/canonical-name: {{ index .ObjectMeta.Labels `service.istio.io/canonical-name` | default (index .ObjectMeta.Labels `app.kubernetes.io/name`) | default (index .ObjectMeta.Labels `app`) | default .DeploymentMeta.Name  | quote }}
     service.istio.io/canonical-revision: {{ index .ObjectMeta.Labels `service.istio.io/canonical-revision` | default (index .ObjectMeta.Labels `app.kubernetes.io/version`) | default (index .ObjectMeta.Labels `version`) | default "latest"  | quote }}
     istio.io/rev: {{ .Revision | default "default" | quote }}
@@ -51,7 +51,7 @@ spec:
     {{- if .Values.global.caAddress }}
       value: {{ .Values.global.caAddress }}
     {{- else }}
-      value: istiod-{{ .Values.revision | default "default" }}.{{ .Release.Namespace }}.svc:15012
+      value: istiod-{{ valueOrDefault .Values.revision "default" }}.{{ .Values.global.istioNamespace }}.svc:15012
     {{- end }}
     - name: POD_NAME
       valueFrom:
@@ -212,5 +212,5 @@ spec:
   {{- end }}
   {{- if eq (env "ENABLE_LEGACY_FSGROUP_INJECTION" "true") "true" }}
   securityContext:
-    fsGroup: 1337
+    fsGroup: {{ .ProxyGID }}
   {{- end }}
