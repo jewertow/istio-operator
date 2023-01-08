@@ -141,6 +141,12 @@ function patchGalley() {
           - --enableIngressClassName=false\
 {{- end}}' "${deployment}"
 
+  # add named port for prometheus merged metrics
+  sed_wrap -i -e '/ports:/ a\
+    - containerPort: 15020\
+      protocol: TCP\
+      name: http-envoy-merged-prom' "${HELM_DIR}/istio-control/istio-discovery/files/injection-template.yaml"
+
   ############## disable webhook config updates ############################
   # Name of the mutatingwebhookconfiguration to patch, if istioctl is not used.
   sed_wrap -i -e '/env:/ a\
