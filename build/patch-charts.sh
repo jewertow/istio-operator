@@ -378,10 +378,6 @@ function patchSidecarInjector() {
       "${HELM_DIR}/istio-control/istio-discovery/files/injection-template.yaml"
   # status port is incorrect
   sed_wrap -i -e 's/statusPort: 15020$/statusPort: 15021/' "${HELM_DIR}/istio-control/istio-discovery/values.yaml"
-  # exclude 15090 from inbound ports
-  # shellcheck disable=SC2016
-  sed_wrap -i -e 's$traffic.sidecar.istio.io/excludeInboundPorts: "{{ excludeInboundPort (annotation .ObjectMeta `status.sidecar.istio.io/port` .Values.global.proxy.statusPort) (annotation .ObjectMeta `traffic.sidecar.istio.io/excludeInboundPorts` .Values.global.proxy.excludeInboundPorts) }}"$traffic.sidecar.istio.io/excludeInboundPorts: "15090,{{ excludeInboundPort (annotation .ObjectMeta `status.sidecar.istio.io/port` .Values.global.proxy.statusPort) (annotation .ObjectMeta `traffic.sidecar.istio.io/excludeInboundPorts` .Values.global.proxy.excludeInboundPorts) }}"$' \
-      "${HELM_DIR}/istio-control/istio-discovery/files/injection-template.yaml"
 }
 
 # The following modifications are made to the generated helm template for the Kiali yaml file
