@@ -142,6 +142,7 @@ function patchGalley() {
 {{- end}}' "${deployment}"
 
   # add named port for prometheus merged metrics
+  # TODO: Add this port also to templates of ingress and egress gateways.
   sed_wrap -i -e '/ports:/ a\
     - containerPort: 15020\
       protocol: TCP\
