@@ -1,0 +1,62 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: istio-system-1
+spec:
+  isCA: true
+  duration: 2160h # 90d
+  secretName: istio-ca
+  commonName: mesh-1
+  subject:
+    organizations:
+      - cluster.local
+      - my-company
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: istio-ca
+  namespace: istio-system-1
+spec:
+  ca:
+    secretName: istio-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca
+  namespace: istio-system-2
+spec:
+  isCA: true
+  duration: 2160h # 90d
+  secretName: istio-ca
+  commonName: mesh-2
+  subject:
+    organizations:
+      - cluster.local
+      - my-company
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: istio-ca
+  namespace: istio-system-2
+spec:
+  ca:
+    secretName: istio-ca

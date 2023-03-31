@@ -1,4 +1,4 @@
-replicaCount: 3
+replicaCount: 1
 
 image:
   repository: quay.io/jetstack/cert-manager-istio-csr
@@ -7,26 +7,23 @@ image:
 
 app:
   certmanager:
-    namespace: istio-system
+    namespace: istio-system-2
     preserveCertificateRequests: true
     issuer:
       group: cert-manager.io
       kind: Issuer
       name: istio-ca
   controller:
-    configmapNamespaceSelector: maistra.io/member-of=istio-system
-
+    leaderElectionNamespace: istio-system-2
+    configmapNamespaceSelector: maistra.io/member-of=istio-system-2
+  istio:
+    namespace: istio-system-2
+    revisions: ["basic"]
   tls:
     trustDomain: cluster.local
     certificateDuration: 3600s
     certificateDNSNames:
-      # Name used by the e2e client
-      - istio-csr.cert-manager.svc
-      # Name used within the demo cluster
-      - cert-manager-istio-csr.cert-manager.svc
-
-  istio:
-    revisions: ["basic"]
+    - cert-manager-istio-csr.istio-system-2.svc
   server:
     maxCertificateDuration: 5m
     serving:
