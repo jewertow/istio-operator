@@ -35,9 +35,13 @@ spec:
       targetLabel: revision
     - action: labeldrop
       regex: "__meta_kubernetes_pod_label_(.+)"
-    - sourceLabels: [__meta_kubernetes_namespace]
-      action: replace
+    - action: replace
+      sourceLabels: [ __meta_kubernetes_namespace ]
       targetLabel: namespace
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      action: replace
+    - action: replace
+      sourceLabels: [ __meta_kubernetes_pod_name ]
       targetLabel: pod_name
+    metricRelabelings:
+    - action: drop
+      regex: "istio_agent_go_gc_(.+)"
+      sourceLabels: [__name__]

@@ -1,0 +1,15 @@
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: disable-tcp-metrics
+spec:
+  selector:
+    matchLabels:
+      app: httpbin
+  metrics:
+  - providers:
+    - name: prometheus
+    overrides:
+    - match:
+        metric: TCP_OPENED_CONNECTIONS
+      disabled: true

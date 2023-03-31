@@ -10,9 +10,6 @@ spec:
       enabled: false
     prometheus:
       enabled: false
-  extensionProviders:
-  - name: prometheus
-    prometheus: {}
   gateways:
     ingress:
       routeConfig:
@@ -29,6 +26,11 @@ spec:
     dataPlane:
       mtls: true
     manageNetworkPolicy: false
+  techPreview:
+    meshConfig:
+      extensionProviders:
+      - name: prometheus
+        prometheus: {}
   tracing:
     type: None
 ---
