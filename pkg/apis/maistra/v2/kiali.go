@@ -14,8 +14,9 @@ type KialiAddonConfig struct {
 }
 
 type KialiPrometheusConfig struct {
-	URL  string                     `json:"url,omitempty"`
-	Auth *KialiPrometheusAuthConfig `json:"auth,omitempty"`
+	Auth        *KialiPrometheusAuthConfig        `json:"auth,omitempty"`
+	ThanosProxy *KialiPrometheusThanosProxyConfig `json:"thanosProxy,omitempty"`
+	URL         string                            `json:"url,omitempty"`
 }
 
 type KialiPrometheusAuthConfig struct {
@@ -34,6 +35,10 @@ type KialiPrometheusAuthBearerConfig struct {
 
 type KialiPrometheusHttpsConfig struct {
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+}
+
+type KialiPrometheusThanosProxyConfig struct {
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // KialiInstallConfig is used to configure a kiali installation

@@ -813,6 +813,11 @@ spec:
                                     type: string
                                 type: object
                             type: object
+                          thanosProxy:
+                            properties:
+                              enabled:
+                                type: boolean
+                            type: object
                           url:
                             type: string
                         type: object
@@ -5763,6 +5768,11 @@ spec:
                                       token:
                                         type: string
                                     type: object
+                                type: object
+                              thanosProxy:
+                                properties:
+                                  enabled:
+                                    type: boolean
                                 type: object
                               url:
                                 type: string

@@ -126,6 +126,10 @@ spec:
         use_kiali_token: false
       {{- end }}
     {{- end }}
+    {{- if .Values.kiali.externalPrometheus.thanosProxy }}
+      thanos_proxy:
+        enabled: {{ .Values.kiali.externalPrometheus.thanosProxy.enabled }}
+    {{- end }}
       url: {{ .Values.kiali.externalPrometheus.url }}
 {{- else }}
     prometheus:
