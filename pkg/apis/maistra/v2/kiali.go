@@ -6,10 +6,34 @@ import corev1 "k8s.io/api/core/v1"
 type KialiAddonConfig struct {
 	Enablement `json:",inline"`
 	// Name of Kiali CR, Namespace must match control plane namespace
-	Name string `json:"name,omitempty"`
+	Name       string                 `json:"name,omitempty"`
+	Prometheus *KialiPrometheusConfig `json:"prometheus,omitempty"`
 	// Install a Kiali resource if the named Kiali resource is not present.
 	// +optional
 	Install *KialiInstallConfig `json:"install,omitempty"`
+}
+
+type KialiPrometheusConfig struct {
+	URL  string                     `json:"url,omitempty"`
+	Auth *KialiPrometheusAuthConfig `json:"auth,omitempty"`
+}
+
+type KialiPrometheusAuthConfig struct {
+	Basic  *KialiPrometheusAuthBasicConfig  `json:"basic,omitempty"`
+	Bearer *KialiPrometheusAuthBearerConfig `json:"bearer,omitempty"`
+}
+
+type KialiPrometheusAuthBasicConfig struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+type KialiPrometheusAuthBearerConfig struct {
+	Token string `json:"token,omitempty"`
+}
+
+type KialiPrometheusHttpsConfig struct {
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }
 
 // KialiInstallConfig is used to configure a kiali installation

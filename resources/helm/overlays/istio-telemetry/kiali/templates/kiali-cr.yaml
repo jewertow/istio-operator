@@ -112,6 +112,22 @@ spec:
       url: "{{ .Values.kiali.dashboard.grafanaURL }}"
 {{- end }}
 {{- end }}
+{{- if .Values.kiali.externalPrometheus }}
+    prometheus:
+    {{- if or .Values.kiali.externalPrometheus.basic .Values.kiali.externalPrometheus.bearer }}
+      auth:
+      {{- if .Values.kiali.externalPrometheus.basic }}
+        type: basic
+        username: internal
+        password: ""
+      {{- else }}
+        type: bearer
+        token: {{ .Values.kiali.externalPrometheus.bearer.token }}
+        use_kiali_token: false
+      {{- end }}
+    {{- end }}
+      url: {{ .Values.kiali.externalPrometheus.url }}
+{{- else }}
     prometheus:
       auth:
         type: "basic"
@@ -119,6 +135,7 @@ spec:
         username: "internal"
         password: ""
       url: "https://prometheus.{{ .Release.Namespace }}.svc:9090"
+{{- end }}
     tracing:
       auth:
         type: "basic"

@@ -797,6 +797,26 @@ spec:
                         type: object
                       name:
                         type: string
+                      prometheus:
+                        properties:
+                          auth:
+                            properties:
+                              basic:
+                                properties:
+                                  password:
+                                    type: string
+                                  username:
+                                    type: string
+                                type: object
+                              bearer:
+                                properties:
+                                  token:
+                                    type: string
+                                type: object
+                            type: object
+                          url:
+                            type: string
+                        type: object
                     type: object
                   prometheus:
                     properties:
@@ -5728,6 +5748,26 @@ spec:
                             type: object
                           name:
                             type: string
+                          prometheus:
+                            properties:
+                              auth:
+                                properties:
+                                  basic:
+                                    properties:
+                                      password:
+                                        type: string
+                                      username:
+                                        type: string
+                                    type: object
+                                  bearer:
+                                    properties:
+                                      token:
+                                        type: string
+                                    type: object
+                                type: object
+                              url:
+                                type: string
+                            type: object
                         type: object
                       prometheus:
                         properties:
