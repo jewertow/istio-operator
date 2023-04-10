@@ -96,21 +96,22 @@ func (r *controlPlaneInstanceReconciler) patchKiali(ctx context.Context, grafana
 		}
 	}
 
-	// XXX: should we also configure prometheus?
-
-	// credentials
-	rawPassword, err := r.getRawHtPasswd(ctx)
-	if err != nil {
-		return common.RequeueWithError(fmt.Errorf("could not get htpasswd required for kiali external_serivces: %s", err))
-	}
-	if err := updatedKiali.Spec.SetField("external_services.grafana.auth.password", rawPassword); err != nil {
-		return common.RequeueWithError(errorOnSettingValueInKialiCR("external_services.grafana.auth.password", err))
-	}
-	if err := updatedKiali.Spec.SetField("external_services.prometheus.auth.password", rawPassword); err != nil {
-		return common.RequeueWithError(errorOnSettingValueInKialiCR("external_services.prometheus.auth.password", err))
-	}
-	if err := updatedKiali.Spec.SetField("external_services.tracing.auth.password", rawPassword); err != nil {
-		return common.RequeueWithError(errorOnSettingValueInKialiCR("external_services.tracing.auth.password", err))
+	if r.Instance.Spec.Addons.Kiali.Prometheus != nil {
+		// XXX: should we also configure prometheus?
+		// credentials
+		rawPassword, err := r.getRawHtPasswd(ctx)
+		if err != nil {
+			return common.RequeueWithError(fmt.Errorf("could not get htpasswd required for kiali external_serivces: %s", err))
+		}
+		if err := updatedKiali.Spec.SetField("external_services.grafana.auth.password", rawPassword); err != nil {
+			return common.RequeueWithError(errorOnSettingValueInKialiCR("external_services.grafana.auth.password", err))
+		}
+		if err := updatedKiali.Spec.SetField("external_services.prometheus.auth.password", rawPassword); err != nil {
+			return common.RequeueWithError(errorOnSettingValueInKialiCR("external_services.prometheus.auth.password", err))
+		}
+		if err := updatedKiali.Spec.SetField("external_services.tracing.auth.password", rawPassword); err != nil {
+			return common.RequeueWithError(errorOnSettingValueInKialiCR("external_services.tracing.auth.password", err))
+		}
 	}
 
 	// FUTURE: add support for synchronizing kiali version with control plane version

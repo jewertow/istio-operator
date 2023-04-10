@@ -94,7 +94,7 @@ func validateGlobal(ctx context.Context, version Ver, meta *metav1.ObjectMeta, s
 }
 
 func validatePrometheusEnabledWhenKialiEnabled(spec *v2.ControlPlaneSpec, allErrors []error) []error {
-	if spec.IsKialiEnabled() && !spec.IsPrometheusEnabled() {
+	if spec.IsKialiEnabled() && !spec.IsPrometheusEnabled() && spec.Addons.Kiali.Prometheus == nil {
 		return append(allErrors, fmt.Errorf(".spec.addons.prometheus.enabled must be true when .spec.addons.kiali.enabled is true"))
 	}
 	return allErrors
