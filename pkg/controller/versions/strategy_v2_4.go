@@ -266,8 +266,6 @@ func (v *versionStrategyV2_4) ValidateV2Full(ctx context.Context, cl client.Clie
 			return err
 		}
 	}
-	// additional validation checks that are only performed just before reconciliation
-	allErrors = validatePrometheusEnabledWhenKialiEnabled(spec, allErrors)
 	return NewValidationError(allErrors...)
 }
 
