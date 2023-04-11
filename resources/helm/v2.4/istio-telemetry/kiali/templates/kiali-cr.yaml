@@ -116,17 +116,24 @@ spec:
 {{- end }}
 {{- if .Values.kiali.externalPrometheus }}
     prometheus:
-    {{- if or .Values.kiali.externalPrometheus.basic .Values.kiali.externalPrometheus.bearer }}
+    {{- if or .Values.kiali.externalPrometheus.auth.basic .Values.kiali.externalPrometheus.auth.bearer }}
       auth:
-      {{- if .Values.kiali.externalPrometheus.basic }}
+      {{- if .Values.kiali.externalPrometheus.auth.basic }}
         type: basic
         username: internal
         password: ""
       {{- else }}
         type: bearer
-        token: {{ .Values.kiali.externalPrometheus.bearer.token }}
+        token: {{ .Values.kiali.externalPrometheus.auth.bearer.token }}
         use_kiali_token: false
       {{- end }}
+      {{- if .Values.kiali.externalPrometheus.auth.insecureSkipVerify }}
+        insecure_skip_verify: {{ .Values.kiali.externalPrometheus.auth.insecureSkipVerify }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.kiali.externalPrometheus.thanosProxy }}
+      thanos_proxy:
+        enabled: {{ .Values.kiali.externalPrometheus.thanosProxy.enabled }}
     {{- end }}
     {{- if .Values.kiali.externalPrometheus.thanosProxy }}
       thanos_proxy:

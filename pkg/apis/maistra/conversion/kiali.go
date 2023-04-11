@@ -39,15 +39,20 @@ func populateKialiAddonValues(kiali *v2.KialiAddonConfig, values map[string]inte
 		}
 		if kiali.Prometheus.Auth != nil {
 			if kiali.Prometheus.Auth.Basic != nil {
-				if err := setHelmStringValue(kialiValues, "externalPrometheus.basic.username", kiali.Prometheus.Auth.Basic.Username); err != nil {
+				if err := setHelmStringValue(kialiValues, "externalPrometheus.auth.basic.username", kiali.Prometheus.Auth.Basic.Username); err != nil {
 					return err
 				}
-				if err := setHelmStringValue(kialiValues, "externalPrometheus.basic.password", kiali.Prometheus.Auth.Basic.Password); err != nil {
+				if err := setHelmStringValue(kialiValues, "externalPrometheus.auth.basic.password", kiali.Prometheus.Auth.Basic.Password); err != nil {
 					return err
 				}
 			}
 			if kiali.Prometheus.Auth.Bearer != nil {
-				if err := setHelmStringValue(kialiValues, "externalPrometheus.bearer.token", kiali.Prometheus.Auth.Bearer.Token); err != nil {
+				if err := setHelmStringValue(kialiValues, "externalPrometheus.auth.bearer.token", kiali.Prometheus.Auth.Bearer.Token); err != nil {
+					return err
+				}
+			}
+			if kiali.Prometheus.Auth.InsecureSkipVerify != nil {
+				if err := setHelmBoolValue(kialiValues, "externalPrometheus.auth.insecureSkipVerify", *kiali.Prometheus.Auth.InsecureSkipVerify); err != nil {
 					return err
 				}
 			}

@@ -812,6 +812,8 @@ spec:
                                   token:
                                     type: string
                                 type: object
+                              insecureSkipVerify:
+                                type: boolean
                             type: object
                           thanosProxy:
                             properties:
@@ -5768,6 +5770,8 @@ spec:
                                       token:
                                         type: string
                                     type: object
+                                  insecureSkipVerify:
+                                    type: boolean
                                 type: object
                               thanosProxy:
                                 properties:

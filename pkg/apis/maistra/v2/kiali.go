@@ -20,8 +20,9 @@ type KialiPrometheusConfig struct {
 }
 
 type KialiPrometheusAuthConfig struct {
-	Basic  *KialiPrometheusAuthBasicConfig  `json:"basic,omitempty"`
-	Bearer *KialiPrometheusAuthBearerConfig `json:"bearer,omitempty"`
+	Basic              *KialiPrometheusAuthBasicConfig  `json:"basic,omitempty"`
+	Bearer             *KialiPrometheusAuthBearerConfig `json:"bearer,omitempty"`
+	InsecureSkipVerify *bool                            `json:"insecureSkipVerify,omitempty"`
 }
 
 type KialiPrometheusAuthBasicConfig struct {
@@ -31,10 +32,6 @@ type KialiPrometheusAuthBasicConfig struct {
 
 type KialiPrometheusAuthBearerConfig struct {
 	Token string `json:"token,omitempty"`
-}
-
-type KialiPrometheusHttpsConfig struct {
-	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }
 
 type KialiPrometheusThanosProxyConfig struct {
