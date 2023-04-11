@@ -16,6 +16,7 @@ type KialiAddonConfig struct {
 type KialiPrometheusConfig struct {
 	Auth        *KialiPrometheusAuthConfig        `json:"auth,omitempty"`
 	ThanosProxy *KialiPrometheusThanosProxyConfig `json:"thanosProxy,omitempty"`
+	QueryScope  map[string]string                 `json:"queryScope,omitempty"`
 	URL         string                            `json:"url,omitempty"`
 }
 

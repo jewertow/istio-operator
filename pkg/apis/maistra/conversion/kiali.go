@@ -34,9 +34,6 @@ func populateKialiAddonValues(kiali *v2.KialiAddonConfig, values map[string]inte
 	}()
 
 	if kiali.Prometheus != nil {
-		if err := setHelmStringValue(kialiValues, "externalPrometheus.url", kiali.Prometheus.URL); err != nil {
-			return err
-		}
 		if kiali.Prometheus.Auth != nil {
 			if kiali.Prometheus.Auth.Basic != nil {
 				if err := setHelmStringValue(kialiValues, "externalPrometheus.auth.basic.username", kiali.Prometheus.Auth.Basic.Username); err != nil {
@@ -57,10 +54,18 @@ func populateKialiAddonValues(kiali *v2.KialiAddonConfig, values map[string]inte
 				}
 			}
 		}
+		if kiali.Prometheus.QueryScope != nil {
+			if err := setHelmStringMapValue(kialiValues, "externalPrometheus.queryScope", kiali.Prometheus.QueryScope); err != nil {
+				return err
+			}
+		}
 		if kiali.Prometheus.ThanosProxy != nil {
 			if err := setHelmBoolValue(kialiValues, "externalPrometheus.thanosProxy.enabled", kiali.Prometheus.ThanosProxy.Enabled); err != nil {
 				return err
 			}
+		}
+		if err := setHelmStringValue(kialiValues, "externalPrometheus.url", kiali.Prometheus.URL); err != nil {
+			return err
 		}
 	}
 

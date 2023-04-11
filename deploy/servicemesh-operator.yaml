@@ -816,6 +816,10 @@ spec:
                               insecureSkipVerify:
                                 type: boolean
                             type: object
+                          queryScope:
+                            additionalProperties:
+                              type: string
+                            type: object
                           thanosProxy:
                             properties:
                               enabled:
@@ -5773,6 +5777,10 @@ spec:
                                     type: object
                                   insecureSkipVerify:
                                     type: boolean
+                                type: object
+                              queryScope:
+                                additionalProperties:
+                                  type: string
                                 type: object
                               thanosProxy:
                                 properties:
