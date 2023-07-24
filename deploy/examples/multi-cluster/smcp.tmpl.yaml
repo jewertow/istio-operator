@@ -1,0 +1,86 @@
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: basic
+spec:
+  addons:
+    grafana:
+      enabled: false
+    kiali:
+      enabled: false
+    prometheus:
+      enabled: false
+  cluster:
+    multiCluster:
+      enabled: true
+#      meshNetworks:
+#        east-network:
+#          endpoints:
+#            - fromRegistry: east-cluster
+#          gateways:
+#            - address: 44.216.64.58
+#              port: 15443
+#        west-network:
+#          endpoints:
+#            - fromRegistry: west-cluster
+#          gateways:
+#            - address: 3.23.217.91
+#              port: 15443
+    name: {{clusterNamePrefix}}-cluster
+    network: {{clusterNamePrefix}}-network
+  gateways:
+    additionalIngress:
+      east-west-gateway:
+        enabled: true
+        service:
+          type: LoadBalancer
+          metadata:
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-type: nlb
+            labels:
+              istio: eastwestgateway
+              app: istio-eastwestgateway
+              topology.istio.io/network: {{clusterNamePrefix}}-network
+          ports:
+          - name: status-port
+            port: 15021
+            targetPort: 15021
+          - name: tls
+            port: 15443
+            targetPort: 15443
+          - name: tls-istiod
+            port: 15012
+            targetPort: 15012
+          - name: tls-webhook
+            port: 15017
+            targetPort: 15017
+        runtime:
+          container:
+            env:
+              ISTIO_META_REQUESTED_NETWORK_VIEW: {{clusterNamePrefix}}-network
+    openshiftRoute:
+      enabled: false
+  general:
+    logging:
+      componentLevels:
+        default: info
+  mode: ClusterWide
+  meshConfig:
+    discoverySelectors:
+      - matchLabels:
+          istio-injection: enabled
+  proxy:
+    accessLogging:
+      file:
+        name: /dev/stdout
+  security:
+    dataPlane:
+      mtls: true
+    identity:
+      type: ThirdParty
+    manageNetworkPolicy: false
+  techPreview:
+    global:
+      meshID: bookinfo-mesh
+  tracing:
+    type: None

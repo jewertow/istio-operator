@@ -128,6 +128,7 @@ func populateClusterValues(in *v2.ControlPlaneSpec, namespace string, values map
 					return err
 				}
 			}
+			// TODO(jewertow): Why?
 			// XXX: ingress and egress gateways must be configured if multicluster is enabled
 			if in.Gateways == nil {
 				in.Gateways = &v2.GatewaysConfig{}
