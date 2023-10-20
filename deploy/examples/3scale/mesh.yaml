@@ -1,0 +1,36 @@
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: basic
+spec:
+  addons:
+    kiali:
+      enabled: true
+    prometheus:
+      enabled: true
+    grafana:
+      enabled: false
+  gateways:
+    egress:
+      enabled: false
+    openshiftRoute:
+      enabled: false
+  general:
+    logging:
+      componentLevels:
+        default: info
+        wasm: debug
+  proxy:
+    accessLogging:
+      file:
+        name: /dev/stdout
+  tracing:
+    type: None
+---
+apiVersion: maistra.io/v1
+kind: ServiceMeshMemberRoll
+metadata:
+  name: default
+spec:
+  members:
+  - bookinfo

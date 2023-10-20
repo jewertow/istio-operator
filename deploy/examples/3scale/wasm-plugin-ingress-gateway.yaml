@@ -1,0 +1,140 @@
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: 3scale-plugin-for-ingress-gateway
+  namespace: istio-system
+spec:
+  url: oci://quay.io/3scale/threescale-wasm-auth:0.0.4
+  phase: AUTHZ
+  selector:
+    # It must be fixed in the docs
+    matchLabels:
+      istio: ingressgateway
+  pluginConfig:
+    api: v1
+    system:
+      name: 3scale-system
+      upstream:
+        # This is only used to set header 'x-3scale-cluster-name'. Couldn't it be removed?
+        # Additionally, why does it need Istio notation and port, if the client uses default https port?
+        # Could that even work for port 8443 or whatever else?
+        # I don't think so, because the client only uses `upstream.url` and does not extract port from the name.
+        #
+        # This is also important to note that SMCP must have set outboundTrafficPolicy: REGISTRY_ONLY.
+        # Otherwise, WASM plugin will not find upstream.name and will return BadArgument.
+        #
+        # TODO: 3scale system must expose HTTP endpoint:
+        # HTTP/1.1 GET /admin/api/services/{service_id}/proxy/configs/production/latest.json?access_token={system.token}
+        name: outbound|80||system.3scale.svc.cluster.local
+        # TODO: Why is it needed?
+        url: http://system.3scale.svc.cluster.local
+        timeout: 5000
+      token: abc
+    backend:
+      name: 3scale-backend
+      upstream:
+        name: outbound|80||httpbin.3scale.svc.cluster.local
+        url: http://httpbin.3scale.svc.cluster.local
+        timeout: 5000
+      extensions:
+        - no_body
+    services:
+      - id: '123'
+        authorities:
+          - "*"
+        credentials:
+          user_key:
+            - query_string:
+                keys:
+                  - user_key
+            - header:
+                keys:
+                  - user_key
+          app_id:
+          - header:
+              keys:
+              - authorization
+              ops:
+              - split:
+                  separator: " "
+                  max: 2
+              - length:
+                  min: 2
+              - reverse
+              - glob:
+                - "Basic"
+              - drop:
+                  tail: 1
+              - base64_urlsafe
+              - split:
+                  separator: ":"
+                  max: 2
+#              - test:
+#                  if:
+#                    length:
+#                      min: 2
+#                  then:
+#                    strlen:
+#                      max: 63
+#                      mode: utf8
+#                    or:
+#                    - strlen:
+#                        min: 1
+#                    - drop:
+#                        tail: 1
+#              - assert:
+#                - and:
+#                  - reverse
+#                  - or:
+#                      - strlen:
+#                          min: 8
+#                          mode: utf8
+#                      - glob:
+#                        - aladdin
+#                        - admin
+#          - query_string:
+#              keys:
+#              - app_id
+#              - application_id
+#          - filter:
+#              path:
+#              - "envoy.filters.http.jwt_authn"
+#              - "0"
+#              keys:
+#              - azp
+#              - aud
+#              ops:
+#              - take:
+#                  head: 1
+#          - header:
+#              keys:
+#              - "x-jwt-payload"
+#              ops:
+#              - "base64_urlsafe"
+#              - json:
+#                  path: []
+#                  keys:
+#                  - azp
+#                  - aud
+#              - take:
+#                  head: 1
+#          - header:
+#              keys:
+#              - "authorization"
+#              ops:
+#                - split:
+#                    separator: " "
+#                    max: 2
+#                    indexes: [1]
+#                - base64_urlsafe
+#                - split:
+#                    separator: " "
+#                    max: 2
+#                    indexes: [0, 1]
+          app_key:
+#            - query_string:
+#                keys:
+#                  - app_key
+            - header:
+                keys:
+                  - app_key
