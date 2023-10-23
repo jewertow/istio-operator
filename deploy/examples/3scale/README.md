@@ -7,7 +7,8 @@ oc apply -f mesh.yaml -n istio-system
 2. Create fake 3scale system:
 ```shell
 oc new-project 3scale
-oc apply -f 3scale-system.yaml -n 3scale
+oc apply -f 3scale-system.yaml
+oc apply -f 3scale-backend.yaml
 ```
 
 3. Apply 3scale plugin to the ingress gateway:
@@ -54,7 +55,12 @@ EOF
 5. Execute request:
 ```shell
 TOKEN=$(curl https://raw.githubusercontent.com/istio/istio/release-1.19/security/tools/jwt/samples/demo.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
-curl -v -H "Authorization: Bearer $TOKEN" -H "Host: $ROUTE" -H "user_key: api-key" -H "app_key: app_key" "http://$ROUTE:80/productpage" > /dev/null
+ROUTE=$(oc get routes -n istio-system istio-ingressgateway -o jsonpath='{.spec.host}')
+curl -v "http://$ROUTE:80/productpage" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Host: $ROUTE" \
+  -H "user_key: api-key" \
+  -H "app_key: app_key" > /dev/null
 ```
 
 Notes:
