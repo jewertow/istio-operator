@@ -44,32 +44,12 @@ spec:
         - "*"
       credentials:
         user_key:
-          - query_string:
-              keys:
-                - user_key
-          - header:
-              keys:
-                - user_key
-        app_id:
-        - header:
+        - filter:
+            path:
+            - envoy.filters.http.jwt_authn
+            - "0"
             keys:
-            - authorization
+            - foo
             ops:
-            - split:
-                separator: " "
-                max: 2
-            - length:
-                min: 2
-            - reverse
-            - glob:
-              - "Basic"
-            - drop:
-                tail: 1
-            - base64_urlsafe
-            - split:
-                separator: ":"
-                max: 2
-        app_key:
-        - header:
-            keys:
-            - app_key
+            - take:
+                head: 1

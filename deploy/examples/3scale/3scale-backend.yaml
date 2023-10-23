@@ -72,7 +72,7 @@ data:
     {
       "request": {
         "method": "GET",
-        "url": "/transactions/authrep.xml?service_id=123&service_token=3d3bfe783a66ad7576c2389d4a8623ea613cc5146dce2e603b001ccac17e36f8&user_key=api-key&usage[hits]=1"
+        "url": "/transactions/authrep.xml?service_id=123&service_token=3d3bfe783a66ad7576c2389d4a8623ea613cc5146dce2e603b001ccac17e36f8&user_key=bar&usage[hits]=1"
       },
       "response": {
         "status": 200
