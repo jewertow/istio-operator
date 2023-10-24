@@ -1,0 +1,43 @@
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: 3scale-plugin-for-httpbin
+  namespace: bookinfo
+spec:
+  url: oci://quay.io/3scale/threescale-wasm-auth:0.0.4
+  phase: AUTHZ
+  selector:
+    matchLabels:
+      app: httpbin
+  pluginConfig:
+    api: v1
+    system:
+      name: 3scale-system
+      upstream:
+        name: outbound|80||system.3scale.svc.cluster.local
+        url: http://system.3scale.svc.cluster.local
+        timeout: 5000
+      token: abc
+    backend:
+      name: 3scale-backend
+      upstream:
+        name: outbound|80||backend.3scale.svc.cluster.local
+        url: http://backend.3scale.svc.cluster.local
+        timeout: 5000
+      extensions:
+      - no_body
+    services:
+    - id: '123'
+      authorities:
+      - "*"
+      credentials:
+        user_key:
+        - filter:
+            path:
+            - envoy.filters.http.jwt_authn
+            - "0"
+            keys:
+            - foo
+            ops:
+            - take:
+                head: 1
