@@ -32,7 +32,7 @@ spec:
   - issuer: "testing@secure.istio.io"
     jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.19/security/tools/jwt/samples/jwks.json"
     # it must be set to true, otherwise, 3scale plugin will not find "authorization" header
-    forwardOriginalToken: true
+    # forwardOriginalToken: true
 EOF
 oc apply -f - <<EOF
 apiVersion: security.istio.io/v1beta1

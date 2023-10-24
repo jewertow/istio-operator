@@ -41,7 +41,7 @@ spec:
     services:
     - id: '123'
       authorities:
-        - "*"
+      - "*"
       credentials:
         user_key:
         - filter:
