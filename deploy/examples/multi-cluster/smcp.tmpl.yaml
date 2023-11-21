@@ -11,24 +11,31 @@ spec:
     prometheus:
       enabled: false
   cluster:
-    multiCluster:
-      enabled: true
-#      meshNetworks:
-#        east-network:
-#          endpoints:
-#            - fromRegistry: east-cluster
-#          gateways:
-#            - address: 44.216.64.58
-#              port: 15443
-#        west-network:
-#          endpoints:
-#            - fromRegistry: west-cluster
-#          gateways:
-#            - address: 3.23.217.91
-#              port: 15443
     name: {{clusterNamePrefix}}-cluster
     network: {{clusterNamePrefix}}-network
+    multiCluster:
+      enabled: true
+      meshNetworks:
+        east-network:
+          endpoints:
+          - fromRegistry: east-cluster
+          gateways:
+#          - registryServiceName: east-west-gateway.istio-system.svc.cluster.local
+          - address: aa627152025a24488a146a49edf6b5e9-e4dba2cf60788e0f.elb.us-west-2.amazonaws.com
+            port: 15443
+        west-network:
+          endpoints:
+          - fromRegistry: west-cluster
+          gateways:
+          - address: a7a2c0c994e7e42098d74de61099eeb8-05a8fba7c3a5b0c9.elb.us-east-1.amazonaws.com
+            port: 15443
   gateways:
+    ingress:
+      # does not work
+      enabled: false
+    egress:
+      # does not work
+      enabled: false
     additionalIngress:
       east-west-gateway:
         enabled: true
@@ -58,6 +65,8 @@ spec:
           container:
             env:
               ISTIO_META_REQUESTED_NETWORK_VIEW: {{clusterNamePrefix}}-network
+      routeConfig:
+        enabled: false
     openshiftRoute:
       enabled: false
   general:
@@ -67,8 +76,8 @@ spec:
   mode: ClusterWide
   meshConfig:
     discoverySelectors:
-      - matchLabels:
-          istio-injection: enabled
+    - matchLabels:
+        istio-injection: enabled
   proxy:
     accessLogging:
       file:
