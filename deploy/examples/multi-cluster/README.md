@@ -1,9 +1,11 @@
 1. Create oc aliases for both clusters:
 ```shell
-export KUBECONFIG_WEST=...
+export KUBECONFIG_WEST=
+export KUBE_API_SERVER_URL_WEST=
 ```
 ```shell
-export KUBECONFIG_EAST=...
+export KUBECONFIG_EAST=
+export KUBE_API_SERVER_URL_EAST=
 ```
 ```shell
 alias oc-west="KUBECONFIG=$KUBECONFIG_WEST oc"
@@ -44,25 +46,23 @@ sed "s/{{clusterNamePrefix}}/east/g" smcp.tmpl.yaml | oc-east apply -n istio-sys
 
 4. Create auto passthrough gateway for east-west gateway:
 ```shell
-oc-west apply -n istio-system -f auto-passthrough-gateway.yaml
-oc-east apply -n istio-system -f auto-passthrough-gateway.yaml
+sed "s/{{clusterNamePrefix}}/west/g" istio-eastwestgateway.yaml | oc-west apply -n istio-system -f -
+sed "s/{{clusterNamePrefix}}/east/g" istio-eastwestgateway.yaml | oc-east apply -n istio-system -f -
 ```
 
 5. Generate kubeconfigs for remote clusters:
 ```shell
 ./generate-kubeconfig.sh \
   --cluster-name=west \
-  --server-url=https://api.ci-ln-2ynkqgb-76ef8.origin-ci-int-aws.dev.rhcloud.com:6443 \
+  --server-url=$KUBE_API_SERVER_WEST \
   --namespace=istio-system \
   --revision=basic \
-  --secret-name=istiod-basic-token-nb8kl \
   --remote-kubeconfig-path=$KUBECONFIG_WEST > $KUBECONFIG_LOCATION/istiod-basic-west-cluster.kubeconfig
 ./generate-kubeconfig.sh \
   --cluster-name=east \
-  --server-url=https://api.ci-ln-xjtm8w2-76ef8.origin-ci-int-aws.dev.rhcloud.com:6443 \
+  --server-url=$KUBE_API_SERVER_EAST \
   --namespace=istio-system \
   --revision=basic \
-  --secret-name=istiod-basic-token-wm22t \
   --remote-kubeconfig-path=$KUBECONFIG_EAST > $KUBECONFIG_LOCATION/istiod-basic-east-cluster.kubeconfig
 ```
 
@@ -96,9 +96,19 @@ oc-east apply -f https://raw.githubusercontent.com/maistra/istio/maistra-2.4/sam
 
 8. Test connectivity between services:
 ```shell
+istioctl --kubeconfig=$KUBECONFIG_EAST pc endpoints $(oc-east get pods -n sleep -l app=sleep -o jsonpath='{.items[].metadata.name}') -n sleep
 oc-east exec $(oc-east get pods -l app=sleep -n sleep -o jsonpath='{.items[].metadata.name}') -n sleep -c sleep -- \
   curl -v "productpage.bookinfo:9080/productpage"
 ```
+
+9. Update mesh networks:
+```shell
+EAST_HOSTNAME=$(oc-east get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+WEST_HOSTNAME=$(oc-west get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+oc-east patch smcp basic -n istio-system --type=merge -p "{\"spec\":{\"cluster\":{\"multiCluster\":{\"enabled\":true,\"meshNetworks\":{\"west-network\":{\"endpoints\":[{\"fromRegistry\":\"west-cluster\"}],\"gateways\":[{\"address\":\"$WEST_HOSTNAME\",\"port\":15443}]}}}}}}"
+```
+
+10. Repeat step 8 again. 
 
 #### Identified issues:
 1. Istio Operator does not create service account `istio-reader-service-account` that should be used by remote cluster.

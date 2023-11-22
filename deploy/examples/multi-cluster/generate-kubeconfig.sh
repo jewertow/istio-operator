@@ -38,10 +38,6 @@ case $i in
     revision="${i#*=}"
     shift
     ;;
-    --secret-name=*)
-    secretName="${i#*=}"
-    shift
-    ;;
     --remote-kubeconfig-path=*)
     remoteKubeconfigPath="${i#*=}"
     shift
@@ -55,6 +51,7 @@ done
 set -o errexit
 
 serviceAccount="istiod-$revision"
+secretName=$(KUBECONFIG="$remoteKubeconfigPath" oc -n "$namespace" get secrets | grep "istiod-$revision-token" | awk '{print $1}')
 ca=$(KUBECONFIG="$remoteKubeconfigPath" oc -n "$namespace" get secret "$secretName" -o=jsonpath='{.data.ca\.crt}')
 token=$(KUBECONFIG="$remoteKubeconfigPath" oc -n "$namespace" get secret "$secretName" -o=jsonpath='{.data.token}' | base64 --decode)
 
