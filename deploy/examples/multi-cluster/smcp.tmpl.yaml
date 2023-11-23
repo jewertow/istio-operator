@@ -15,13 +15,14 @@ spec:
     network: {{clusterNamePrefix}}-network
     multiCluster:
       enabled: true
+      meshNetworks:
+        remote-network:
+          endpoints:
+          - fromRegistry: remote-cluster
+          gateways:
+          - address: remote-gateway
+            port: 15443
   gateways:
-    ingress:
-      # does not work
-      enabled: false
-    egress:
-      # does not work
-      enabled: false
     openshiftRoute:
       enabled: false
   general:

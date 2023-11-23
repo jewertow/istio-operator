@@ -1,11 +1,9 @@
 1. Create oc aliases for both clusters:
 ```shell
 export KUBECONFIG_WEST=
-export KUBE_API_SERVER_URL_WEST=
 ```
 ```shell
 export KUBECONFIG_EAST=
-export KUBE_API_SERVER_URL_EAST=
 ```
 ```shell
 alias oc-west="KUBECONFIG=$KUBECONFIG_WEST oc"
@@ -26,9 +24,6 @@ oc-west create secret generic cacerts -n istio-system \
       --from-file=cluster1/ca-key.pem \
       --from-file=cluster1/root-cert.pem \
       --from-file=cluster1/cert-chain.pem
-```
-
-```shell
 oc-east create namespace istio-system
 oc-east label namespace istio-system topology.istio.io/network=network2
 oc-east create secret generic cacerts -n istio-system \
@@ -54,13 +49,11 @@ sed "s/{{clusterNamePrefix}}/east/g" istio-eastwestgateway.yaml | oc-east apply 
 ```shell
 ./generate-kubeconfig.sh \
   --cluster-name=west \
-  --server-url=$KUBE_API_SERVER_WEST \
   --namespace=istio-system \
   --revision=basic \
   --remote-kubeconfig-path=$KUBECONFIG_WEST > $KUBECONFIG_LOCATION/istiod-basic-west-cluster.kubeconfig
 ./generate-kubeconfig.sh \
   --cluster-name=east \
-  --server-url=$KUBE_API_SERVER_EAST \
   --namespace=istio-system \
   --revision=basic \
   --remote-kubeconfig-path=$KUBECONFIG_EAST > $KUBECONFIG_LOCATION/istiod-basic-east-cluster.kubeconfig
@@ -74,8 +67,7 @@ oc-west create secret generic istio-remote-secret-east-cluster \
   --type=string
 oc-west annotate secret istio-remote-secret-east-cluster -n istio-system networking.istio.io/cluster='east-cluster'
 oc-west label secret istio-remote-secret-east-cluster -n istio-system istio/multiCluster='true'
-```
-```shell
+
 oc-east create secret generic istio-remote-secret-west-cluster \
   -n istio-system \
   --from-file=west-cluster=$KUBECONFIG_LOCATION/istiod-basic-west-cluster.kubeconfig \
@@ -103,9 +95,12 @@ oc-east exec $(oc-east get pods -l app=sleep -n sleep -o jsonpath='{.items[].met
 
 9. Update mesh networks:
 ```shell
-EAST_HOSTNAME=$(oc-east get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 WEST_HOSTNAME=$(oc-west get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-oc-east patch smcp basic -n istio-system --type=merge -p "{\"spec\":{\"cluster\":{\"multiCluster\":{\"enabled\":true,\"meshNetworks\":{\"west-network\":{\"endpoints\":[{\"fromRegistry\":\"west-cluster\"}],\"gateways\":[{\"address\":\"$WEST_HOSTNAME\",\"port\":15443}]}}}}}}"
+sed -e "s/{{clusterNamePrefix}}/east/g" \
+  -e "s/remote-network/west-network/" \
+  -e "s/remote-cluster/west-cluster/" \
+  -e "s/remote-gateway/$WEST_HOSTNAME/" smcp.tmpl.yaml | oc-east apply -n istio-system -f -
+#oc-east patch smcp basic -n istio-system --type=merge -p "{\"spec\":{\"cluster\":{\"multiCluster\":{\"enabled\":true,\"meshNetworks\":{\"west-network\":{\"endpoints\":[{\"fromRegistry\":\"west-cluster\"}],\"gateways\":[{\"address\":\"$WEST_HOSTNAME\",\"port\":15443}]}}}}}}"
 ```
 
 10. Repeat step 8 again. 

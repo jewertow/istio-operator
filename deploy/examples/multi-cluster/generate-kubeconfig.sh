@@ -26,10 +26,6 @@ case $i in
     clusterName="${i#*=}"
     shift
     ;;
-    -s=*|--server-url=*)
-    server="${i#*=}"
-    shift
-    ;;
     -n=*|--namespace=*)
     namespace="${i#*=}"
     shift
@@ -51,6 +47,7 @@ done
 set -o errexit
 
 serviceAccount="istiod-$revision"
+server=$(grep "server:" "$remoteKubeconfigPath" | awk 'NR==1 { print $2 }')
 secretName=$(KUBECONFIG="$remoteKubeconfigPath" oc -n "$namespace" get secrets | grep "istiod-$revision-token" | awk '{print $1}')
 ca=$(KUBECONFIG="$remoteKubeconfigPath" oc -n "$namespace" get secret "$secretName" -o=jsonpath='{.data.ca\.crt}')
 token=$(KUBECONFIG="$remoteKubeconfigPath" oc -n "$namespace" get secret "$secretName" -o=jsonpath='{.data.token}' | base64 --decode)
