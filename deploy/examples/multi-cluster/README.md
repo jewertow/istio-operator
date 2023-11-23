@@ -86,24 +86,24 @@ oc-east label namespace sleep istio-injection=enabled
 oc-east apply -f https://raw.githubusercontent.com/maistra/istio/maistra-2.4/samples/sleep/sleep.yaml -n sleep
 ```
 
-8. Test connectivity between services:
+8. Update mesh networks:
+```shell
+# On AWS
+WEST_HOSTNAME=$(oc-west get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+# On GCP and Azure (and IBM?)
+WEST_HOSTNAME=$(oc-west get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+sed -e "s/{{clusterNamePrefix}}/east/g" \
+  -e "s/remote-network/west-network/" \
+  -e "s/remote-cluster/west-cluster/" \
+  -e "s/remote-gateway/$WEST_HOSTNAME/" smcp.tmpl.yaml | oc-east apply -n istio-system -f -
+```
+
+9. Test connectivity between services:
 ```shell
 istioctl --kubeconfig=$KUBECONFIG_EAST pc endpoints $(oc-east get pods -n sleep -l app=sleep -o jsonpath='{.items[].metadata.name}') -n sleep
 oc-east exec $(oc-east get pods -l app=sleep -n sleep -o jsonpath='{.items[].metadata.name}') -n sleep -c sleep -- \
   curl -v "productpage.bookinfo:9080/productpage"
 ```
-
-9. Update mesh networks:
-```shell
-WEST_HOSTNAME=$(oc-west get services istio-eastwestgateway -n istio-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-sed -e "s/{{clusterNamePrefix}}/east/g" \
-  -e "s/remote-network/west-network/" \
-  -e "s/remote-cluster/west-cluster/" \
-  -e "s/remote-gateway/$WEST_HOSTNAME/" smcp.tmpl.yaml | oc-east apply -n istio-system -f -
-#oc-east patch smcp basic -n istio-system --type=merge -p "{\"spec\":{\"cluster\":{\"multiCluster\":{\"enabled\":true,\"meshNetworks\":{\"west-network\":{\"endpoints\":[{\"fromRegistry\":\"west-cluster\"}],\"gateways\":[{\"address\":\"$WEST_HOSTNAME\",\"port\":15443}]}}}}}}"
-```
-
-10. Repeat step 8 again. 
 
 #### Identified issues:
 1. Istio Operator does not create service account `istio-reader-service-account` that should be used by remote cluster.
