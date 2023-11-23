@@ -1,4 +1,4 @@
-1. Create oc aliases for both clusters:
+1. Export locations of kubeconfig files and create aliases:
 ```shell
 export KUBECONFIG_WEST=
 ```
@@ -6,13 +6,12 @@ export KUBECONFIG_WEST=
 export KUBECONFIG_EAST=
 ```
 ```shell
-alias oc-west="KUBECONFIG=$KUBECONFIG_WEST oc"
-```
-```shell
-alias oc-east="KUBECONFIG=$KUBECONFIG_EAST oc"
-```
-```shell
+# this is an output directory for kubeconfig files created for istiod to watch remote kube API server
 export KUBECONFIG_LOCATION=
+```
+```shell
+alias oc-west="KUBECONFIG=$KUBECONFIG_WEST oc"
+alias oc-east="KUBECONFIG=$KUBECONFIG_EAST oc"
 ```
 
 2. Create cacerts secrets:
