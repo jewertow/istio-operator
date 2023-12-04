@@ -1,0 +1,31 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: control-plane
+spec:
+  profile: openshift
+  revision: 1-20
+  components:
+    pilot:
+      k8s:
+        env:
+          # Disable validation webhook until removal of OSSM 2.x
+          # TODO: Try in another namespace
+          - name: VALIDATION_WEBHOOK_CONFIG_NAME
+            value: ''
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: false
+  meshConfig:
+    accessLogFile: /dev/stdout
+    defaultConfig:
+      proxyMetadata:
+        ISTIO_META_DNS_CAPTURE: "true"
+    discoverySelectors:
+    - matchExpressions:
+      - key: mesh
+        operator: Exists
+    enablePrometheusMerge: true
+    extensionProviders:
+    - name: prometheus
+      prometheus: {}

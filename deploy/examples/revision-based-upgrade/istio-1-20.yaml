@@ -1,0 +1,24 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: control-plane
+spec:
+  profile: openshift
+  revision: 1-20
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: false
+  meshConfig:
+    accessLogFile: /dev/stdout
+    defaultConfig:
+      proxyMetadata:
+        ISTIO_META_DNS_CAPTURE: "true"
+    discoverySelectors:
+      - matchExpressions:
+          - key: mesh
+            operator: Exists
+    enablePrometheusMerge: true
+    extensionProviders:
+      - name: prometheus
+        prometheus: {}

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-ingressgateway-1-20
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+      istio.io/rev: prod-stable
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: gateway
+      labels:
+        app: istio-ingressgateway-1-20
+        istio: ingressgateway
+        istio.io/rev: prod-stable
+    spec:
+      containers:
+      - name: istio-proxy
+        image: auto

@@ -1,0 +1,62 @@
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: basic
+spec:
+  addons:
+    grafana:
+      enabled: false
+    prometheus:
+      enabled: false
+    kiali:
+      enabled: false
+  gateways:
+    ingress:
+      # TODO: investigate if this workaround was necessary in previous releases. Otherwise, istiod logs the following warnings:
+      # warn buildGatewayListeners: skipping privileged gateway port 80 for node istio-ingressgateway-67cf9f9cd8-bc6bp.istio-system as it is an unprivileged pod
+      # warn gateway has zero listeners for node istio-ingressgateway-67cf9f9cd8-bc6bp.istio-system
+      service:
+        ports:
+        - port: 8080
+          protocol: TCP
+      routeConfig:
+        enabled: false
+    egress:
+      enabled: false
+    openshiftRoute:
+      enabled: false
+  general:
+    logging:
+      componentLevels:
+        default: info
+  mode: ClusterWide
+  meshConfig:
+    discoverySelectors:
+    - matchExpressions:
+      - key: mesh
+        operator: Exists
+    extensionProviders:
+    - name: prometheus
+      prometheus: {}
+  proxy:
+    accessLogging:
+      file:
+        name: /dev/stdout
+  security:
+    dataPlane:
+      mtls: true
+    identity:
+      type: ThirdParty
+    manageNetworkPolicy: false
+  tracing:
+    type: None
+  version: v2.4
+---
+apiVersion: maistra.io/v1
+kind: ServiceMeshMemberRoll
+metadata:
+  name: default
+spec:
+  memberSelectors:
+  - matchLabels:
+      istio.io/rev: prod-stable
