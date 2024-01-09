@@ -70,7 +70,7 @@ EOF
 
 3. Fetch the registry endpoint:
 ```shell
-REGISTRY_ADDR=$(oc get quayregistry test-registry -o jsonpath='{.status.registryEndpoint}')
+REGISTRY_ADDR=$(oc get quayregistry test-registry -n quay -o jsonpath='{.status.registryEndpoint}')
 echo $REGISTRY_ADDR
 REGISTRY=$(basename $REGISTRY_ADDR)
 ```
@@ -101,12 +101,11 @@ docker push $REGISTRY/admin/trheescale-wasm-auth:0.0.4
 7. Deploy Service Mesh control plane:
 ```shell
 oc new-project istio-system
-oc apply -f - <<EOF
+oc apply -n istio-system -f - <<EOF
 apiVersion: maistra.io/v2
 kind: ServiceMeshControlPlane
 metadata:
   name: basic
-  namespace: istio-system
 spec:
   addons:
     kiali:
@@ -139,6 +138,8 @@ spec:
   members:
   - bookinfo
 EOF
+```
+```shell
 oc new-project bookinfo
 oc apply -f https://raw.githubusercontent.com/maistra/istio/maistra-2.4/samples/bookinfo/platform/kube/bookinfo.yaml -n bookinfo
 oc apply -f https://raw.githubusercontent.com/maistra/istio/maistra-2.4/samples/bookinfo/networking/bookinfo-gateway.yaml -n bookinfo
