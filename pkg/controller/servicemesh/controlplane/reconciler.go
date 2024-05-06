@@ -185,6 +185,10 @@ func (r *controlPlaneInstanceReconciler) Reconcile(ctx context.Context) (result 
 			return
 		}
 
+		if r.Instance.Spec.Mode == v2.ClusterWideMode {
+			overrideDiscoverySelectors(&r.Instance.Spec, r.Instance.Namespace)
+		}
+
 		// initialize new Status
 		componentStatuses := make([]status.ComponentStatus, 0, len(r.Status.ComponentStatus))
 		for _, charts := range r.getChartsInInstallationOrder(version.Strategy().GetChartInstallOrder()) {
@@ -596,4 +600,44 @@ func (r *controlPlaneInstanceReconciler) getChartsInInstallationOrder(orderedCha
 func componentFromChartName(chartName string) string {
 	_, componentName := path.Split(chartName)
 	return componentName
+}
+
+func overrideDiscoverySelectors(spec *v2.ControlPlaneSpec, controlPlaneNamespace string) {
+	var discoverySelectors []*metav1.LabelSelector
+	if spec.MeshConfig != nil {
+		discoverySelectors = spec.MeshConfig.DiscoverySelectors
+	}
+	if discoverySelectors == nil {
+		return
+	}
+	for _, s := range discoverySelectors {
+		if s.MatchExpressions != nil {
+			for _, e := range s.MatchExpressions {
+				if e.Key == "kubernetes.io/metadata.name" {
+					if sliceContains(e.Values, controlPlaneNamespace) {
+						return
+					}
+				}
+			}
+		}
+	}
+	discoverySelectors = append(discoverySelectors, &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      "kubernetes.io/metadata.name",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{controlPlaneNamespace},
+			},
+		},
+	})
+	spec.MeshConfig.DiscoverySelectors = discoverySelectors
+}
+
+func sliceContains(s []string, expected string) bool {
+	for _, str := range s {
+		if str == expected {
+			return true
+		}
+	}
+	return false
 }
