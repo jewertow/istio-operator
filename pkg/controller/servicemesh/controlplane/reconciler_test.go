@@ -782,6 +782,141 @@ func TestGetEarliestSMCP(t *testing.T) {
 	}
 }
 
+func TestAddDefaultDiscoverySelectors(t *testing.T) {
+	testCases := []struct {
+		name   string
+		input  []*metav1.LabelSelector
+		output []*metav1.LabelSelector
+	}{
+		{
+			name: "matchExpressions for control plane namespace should be added when only matchLabels exists",
+			input: []*metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{
+						"istio-discovery": "enabled",
+					},
+				},
+			},
+			output: []*metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{
+						"istio-discovery": "enabled",
+					},
+				},
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{controlPlaneNamespace},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "matchExpressions for control plane namespace should be added when another matchExpressions definition exists",
+			input: []*metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{
+						"istio-discovery": "enabled",
+					},
+				},
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"test1", "test2"},
+						},
+					},
+				},
+			},
+			output: []*metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{
+						"istio-discovery": "enabled",
+					},
+				},
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"test1", "test2"},
+						},
+					},
+				},
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{controlPlaneNamespace},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "matchExpressions for control plane namespace should not be added if another matchExpressions definition for that namespace exists",
+			input: []*metav1.LabelSelector{
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{controlPlaneNamespace, "test1", "test2"},
+						},
+					},
+				},
+			},
+			output: []*metav1.LabelSelector{
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{controlPlaneNamespace, "test1", "test2"},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		var relevantVersions []versions.Version
+		for _, v := range versions.TestedVersions {
+			if v.AtLeast(versions.V2_4) {
+				relevantVersions = append(relevantVersions, v)
+			}
+		}
+		for _, v := range relevantVersions {
+			t.Run(fmt.Sprintf("%s/%s", tc.name, v.Version().String()), func(t *testing.T) {
+				smcpSpec := newControlPlane()
+				smcpSpec.Spec = maistrav2.ControlPlaneSpec{
+					Version:  v.String(),
+					Profiles: []string{"maistra"},
+					Mode:     maistrav2.ClusterWideMode,
+					MeshConfig: &maistrav2.MeshConfig{
+						DiscoverySelectors: tc.input,
+					},
+				}
+
+				cl, _, r := newReconcilerTestFixture(smcpSpec)
+
+				assertInstanceReconcilerSucceeds(r, t) // this only initializes the SMCP status
+				assertInstanceReconcilerSucceeds(r, t) // this does the actual work
+
+				smcp := maistrav2.ServiceMeshControlPlane{}
+				test.GetObject(ctx, cl, types.NamespacedName{Name: controlPlaneName, Namespace: controlPlaneNamespace}, &smcp)
+				assert.DeepEquals(smcp.Status.AppliedSpec.MeshConfig.DiscoverySelectors, tc.output,
+					"Reconciled discovery selectors do not match the expected result", t)
+			})
+		}
+	}
+}
+
 func assertDeleteSucceeds(r ControlPlaneInstanceReconciler, t *testing.T) {
 	err := r.Delete(hacks.WrapContext(ctx, map[types.NamespacedName]time.Time{}))
 	assert.Success(err, "Delete", t)
