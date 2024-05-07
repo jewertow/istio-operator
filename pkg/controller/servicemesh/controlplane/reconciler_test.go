@@ -37,6 +37,16 @@ var (
 	ptrTrue  = &trueVal
 )
 
+var discoverySelectorsRelevantVersions = func() []versions.Version {
+	var relevantVersions []versions.Version
+	for _, v := range versions.TestedVersions {
+		if v.AtLeast(versions.V2_4) {
+			relevantVersions = append(relevantVersions, v)
+		}
+	}
+	return relevantVersions
+}()
+
 func TestInstallationErrorDoesNotUpdateLastTransitionTimeWhenNoStateTransitionOccurs(t *testing.T) {
 	controlPlane := newControlPlane()
 	controlPlane.Spec.Profiles = []string{"maistra"}
@@ -789,6 +799,21 @@ func TestAddDefaultDiscoverySelectors(t *testing.T) {
 		output []*metav1.LabelSelector
 	}{
 		{
+			name:  "matchExpressions for control plane namespace should be added to empty discovery selectors",
+			input: []*metav1.LabelSelector{},
+			output: []*metav1.LabelSelector{
+				{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{controlPlaneNamespace},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "matchExpressions for control plane namespace should be added when only matchLabels exists",
 			input: []*metav1.LabelSelector{
 				{
@@ -885,13 +910,7 @@ func TestAddDefaultDiscoverySelectors(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		var relevantVersions []versions.Version
-		for _, v := range versions.TestedVersions {
-			if v.AtLeast(versions.V2_4) {
-				relevantVersions = append(relevantVersions, v)
-			}
-		}
-		for _, v := range relevantVersions {
+		for _, v := range discoverySelectorsRelevantVersions {
 			t.Run(fmt.Sprintf("%s/%s", tc.name, v.Version().String()), func(t *testing.T) {
 				smcpSpec := newControlPlane()
 				smcpSpec.Spec = maistrav2.ControlPlaneSpec{
@@ -911,7 +930,68 @@ func TestAddDefaultDiscoverySelectors(t *testing.T) {
 				smcp := maistrav2.ServiceMeshControlPlane{}
 				test.GetObject(ctx, cl, types.NamespacedName{Name: controlPlaneName, Namespace: controlPlaneNamespace}, &smcp)
 				assert.DeepEquals(smcp.Status.AppliedSpec.MeshConfig.DiscoverySelectors, tc.output,
-					"Reconciled discovery selectors do not match the expected result", t)
+					"discovery selectors after reconciliation do not match the expected state", t)
+
+				// Make sure that subsequent reconciliations do not append control plane namespace
+				assertInstanceReconcilerSucceeds(r, t)
+				assertInstanceReconcilerSucceeds(r, t)
+				test.GetObject(ctx, cl, types.NamespacedName{Name: controlPlaneName, Namespace: controlPlaneNamespace}, &smcp)
+				assert.DeepEquals(smcp.Status.AppliedSpec.MeshConfig.DiscoverySelectors, tc.output,
+					"discovery selectors after subsequent reconciliations do not match the expected state", t)
+			})
+		}
+	}
+}
+
+func TestSkipModifyingDiscoverySelectors(t *testing.T) {
+	testCases := []struct {
+		name string
+		spec maistrav2.ControlPlaneSpec
+	}{
+		{
+			name: "discovery selectors in multi-tenant SMCP should not be modified",
+			spec: maistrav2.ControlPlaneSpec{
+				Mode: maistrav2.MultiTenantMode,
+			},
+		},
+		{
+			name: "discovery selectors should not be modified when mesh config is nil",
+			spec: maistrav2.ControlPlaneSpec{
+				Mode: maistrav2.ClusterWideMode,
+			},
+		},
+		{
+			name: "discovery selectors should not be modified when mesh config is empty",
+			spec: maistrav2.ControlPlaneSpec{
+				Mode:       maistrav2.ClusterWideMode,
+				MeshConfig: &maistrav2.MeshConfig{},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		for _, v := range discoverySelectorsRelevantVersions {
+			t.Run(fmt.Sprintf("%s/%s", tc.name, v.Version().String()), func(t *testing.T) {
+				smcpSpec := newControlPlane()
+				smcpSpec.Spec = tc.spec
+				smcpSpec.Spec.Version = v.String()
+				smcpSpec.Spec.Profiles = []string{"maistra"}
+
+				cl, _, r := newReconcilerTestFixture(smcpSpec)
+
+				assertInstanceReconcilerSucceeds(r, t) // this only initializes the SMCP status
+				assertInstanceReconcilerSucceeds(r, t) // this does the actual work
+
+				smcp := maistrav2.ServiceMeshControlPlane{}
+				test.GetObject(ctx, cl, types.NamespacedName{Name: controlPlaneName, Namespace: controlPlaneNamespace}, &smcp)
+				assert.DeepEquals(smcp.Status.AppliedSpec.MeshConfig, (*maistrav2.MeshConfig)(nil),
+					"mesh config after reconciliation do not match the expected state", t)
+
+				// Make sure that subsequent reconciliations do not append control plane namespace
+				assertInstanceReconcilerSucceeds(r, t)
+				assertInstanceReconcilerSucceeds(r, t)
+				test.GetObject(ctx, cl, types.NamespacedName{Name: controlPlaneName, Namespace: controlPlaneNamespace}, &smcp)
+				assert.DeepEquals(smcp.Status.AppliedSpec.MeshConfig, (*maistrav2.MeshConfig)(nil),
+					"mesh Config after subsequent reconciliations does not match the expected state", t)
 			})
 		}
 	}
