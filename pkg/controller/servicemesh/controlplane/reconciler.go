@@ -146,6 +146,10 @@ func (r *controlPlaneInstanceReconciler) Reconcile(ctx context.Context) (result 
 			return
 		}
 
+		if r.Instance.Spec.Mode == v2.ClusterWideMode {
+			overrideDiscoverySelectors(&r.Instance.Spec, r.Instance.Namespace)
+		}
+
 		// Render the templates
 		r.renderings, err = version.Strategy().Render(ctx, &r.ControllerResources, r.cniConfig, r.Instance)
 		// always set these, especially if rendering failed, as these are useful for debugging
@@ -183,10 +187,6 @@ func (r *controlPlaneInstanceReconciler) Reconcile(ctx context.Context) (result 
 			reconciliationMessage = "Error updating labels on mesh namespace"
 			err = errors.Wrap(err, reconciliationMessage)
 			return
-		}
-
-		if r.Instance.Spec.Mode == v2.ClusterWideMode {
-			overrideDiscoverySelectors(&r.Instance.Spec, r.Instance.Namespace)
 		}
 
 		// initialize new Status
