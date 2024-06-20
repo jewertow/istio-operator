@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"fmt"
+	"gomodules.xyz/jsonpatch/v2"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -256,6 +257,85 @@ func TestTemplateIsDefaultedOnUpdate(t *testing.T) {
 	}
 }
 
+func TestEnableGatewayAPI(t *testing.T) {
+	testCases := []struct {
+		name             string
+		request          admission.Request
+		expectedResponse admission.Response
+	}{
+		{
+			name: "default cluster-wide - gatewayAPI should be enabled",
+			request: newCreateRequest(func() *maistrav2.ServiceMeshControlPlane {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				enableIOR(&smcp.Spec)
+				return smcp
+			}()),
+			expectedResponse: admission.Patched("", jsonpatch.JsonPatchOperation{
+				Operation: "add",
+				Path:      "/spec/techPreview/gatewayAPI/enabled",
+				Value:     true,
+			}),
+		},
+		{
+			name: "cluster-wide with gatewayAPI enabled - no patches",
+			request: newCreateRequest(func() *maistrav2.ServiceMeshControlPlane {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				enableIOR(&smcp.Spec)
+				smcp.Spec.TechPreview = maistrav1.NewHelmValues(map[string]interface{}{
+					"gatewayAPI": map[string]interface{}{
+						"enabled": true,
+					},
+				})
+				return smcp
+			}()),
+			expectedResponse: admission.Allowed(""),
+		},
+		{
+			name: "cluster-wide with gatewayAPI disabled - no patches",
+			request: newCreateRequest(func() *maistrav2.ServiceMeshControlPlane {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				enableIOR(&smcp.Spec)
+				smcp.Spec.TechPreview = maistrav1.NewHelmValues(map[string]interface{}{
+					"gatewayAPI": map[string]interface{}{
+						"enabled": false,
+					},
+				})
+				return smcp
+			}()),
+			expectedResponse: admission.Allowed(""),
+		},
+		{
+			name: "cluster-wide and gatewayAPI has wrong value - gatewayAPI should be enabled",
+			request: newCreateRequest(func() *maistrav2.ServiceMeshControlPlane {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				enableIOR(&smcp.Spec)
+				smcp.Spec.TechPreview = maistrav1.NewHelmValues(map[string]interface{}{
+					"gatewayAPI": map[string]interface{}{
+						"enabled": "false",
+					},
+				})
+				return smcp
+			}()),
+			expectedResponse: admission.Patched("", jsonpatch.JsonPatchOperation{
+				Operation: "add",
+				Path:      "/spec/techPreview/gatewayAPI/enabled",
+				Value:     true,
+			}),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mutator := createControlPlaneMutatorTestFixture()
+			response := mutator.Handle(ctx, tc.request)
+			assert.DeepEquals(response.Patches, tc.expectedResponse.Patches, "Unexpected response", t)
+		})
+	}
+}
+
 func createControlPlaneMutatorTestFixture(clientObjects ...runtime.Object) *ControlPlaneMutator {
 	cl, _ := test.CreateClient(clientObjects...)
 	decoder, err := admission.NewDecoder(test.GetScheme())
@@ -399,5 +479,18 @@ func newEmptyControlPlaneV2(namespace string) *maistrav2.ServiceMeshControlPlane
 			Namespace: namespace,
 		},
 		Spec: maistrav2.ControlPlaneSpec{},
+	}
+}
+
+// This is a hack to simplify test data.
+// If IOR is not set, then it's patched by the webhook, and that would require specifying expected patches for IOR
+// in all test cases.
+func enableIOR(spec *maistrav2.ControlPlaneSpec) {
+	spec.Gateways = &maistrav2.GatewaysConfig{
+		OpenShiftRoute: &maistrav2.OpenShiftRouteConfig{
+			Enablement: maistrav2.Enablement{
+				Enabled: &featureEnabled,
+			},
+		},
 	}
 }

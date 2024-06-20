@@ -93,6 +93,8 @@ func (v *ControlPlaneMutator) Handle(ctx context.Context, req admission.Request)
 		}
 	}
 
+	mutator.ConditionallyEnableGatewayAPI(req.AdmissionRequest.Operation)
+
 	if len(mutator.GetProfiles()) == 0 {
 		log.Info("Setting .spec.profiles to default value", "profiles", []string{v1.DefaultTemplate})
 		mutator.SetProfiles([]string{v1.DefaultTemplate})
@@ -169,6 +171,7 @@ type smcpmutator interface {
 	GetPatches() []jsonpatch.JsonPatchOperation
 	IsOpenShiftRouteEnabled() *bool
 	SetOpenShiftRouteEnabled(bool)
+	ConditionallyEnableGatewayAPI(op admissionv1beta1.Operation)
 }
 
 type smcppatch struct {
@@ -234,6 +237,9 @@ func (m *smcpv1mutator) IsOpenShiftRouteEnabled() *bool {
 
 func (m *smcpv1mutator) SetOpenShiftRouteEnabled(value bool) {}
 
+func (m *smcpv1mutator) ConditionallyEnableGatewayAPI(op admissionv1beta1.Operation) {
+}
+
 type smcpv2mutator struct {
 	*smcppatch
 	smcp    *v2.ServiceMeshControlPlane
@@ -298,4 +304,28 @@ func (m *smcpv2mutator) SetOpenShiftRouteEnabled(value bool) {
 	route.Enablement = v2.Enablement{Enabled: &value}
 
 	m.patches = append(m.patches, jsonpatch.NewPatch("add", "/spec/gateways", *gateways))
+}
+
+func (m *smcpv2mutator) ConditionallyEnableGatewayAPI(op admissionv1beta1.Operation) {
+	isGatewayAPISet := func(spec v2.ControlPlaneSpec) bool {
+		if spec.TechPreview != nil {
+			if rawGatewayAPI, ok, err := spec.TechPreview.GetMap("gatewayAPI"); ok {
+				for k, v := range rawGatewayAPI {
+					if k == "enabled" {
+						if _, ok := v.(bool); ok {
+							return true
+						}
+					}
+				}
+			} else if err != nil {
+				return false
+			}
+		}
+		return false
+	}
+	if op == admissionv1beta1.Create {
+		if m.smcp.Spec.Mode == v2.ClusterWideMode && !isGatewayAPISet(m.smcp.Spec) {
+			m.patches = append(m.patches, jsonpatch.NewPatch("add", "/spec/techPreview/gatewayAPI/enabled", true))
+		}
+	}
 }
