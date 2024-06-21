@@ -94,8 +94,8 @@ func (v *ControlPlaneMutator) Handle(ctx context.Context, req admission.Request)
 		}
 	}
 
-	if effectiveVersion.AtLeast(versions.V2_6) {
-		mutator.ConditionallyEnableGatewayAPI(req.AdmissionRequest.Operation)
+	if effectiveVersion.AtLeast(versions.V2_6) && mutator.ShouldPatchGatewayAPI(req.AdmissionRequest.Operation) {
+		mutator.EnableGatewayAPI()
 	}
 
 	if len(mutator.GetProfiles()) == 0 {
@@ -174,7 +174,8 @@ type smcpmutator interface {
 	GetPatches() []jsonpatch.JsonPatchOperation
 	IsOpenShiftRouteEnabled() *bool
 	SetOpenShiftRouteEnabled(bool)
-	ConditionallyEnableGatewayAPI(op admissionv1beta1.Operation)
+	ShouldPatchGatewayAPI(op admissionv1beta1.Operation) bool
+	EnableGatewayAPI()
 }
 
 type smcppatch struct {
@@ -238,10 +239,13 @@ func (m *smcpv1mutator) IsOpenShiftRouteEnabled() *bool {
 	return nil
 }
 
-func (m *smcpv1mutator) SetOpenShiftRouteEnabled(value bool) {}
+func (m *smcpv1mutator) SetOpenShiftRouteEnabled(_ bool) {}
 
-func (m *smcpv1mutator) ConditionallyEnableGatewayAPI(op admissionv1beta1.Operation) {
+func (m *smcpv1mutator) ShouldPatchGatewayAPI(_ admissionv1beta1.Operation) bool {
+	return false
 }
+
+func (m *smcpv1mutator) EnableGatewayAPI() {}
 
 type smcpv2mutator struct {
 	*smcppatch
@@ -309,7 +313,7 @@ func (m *smcpv2mutator) SetOpenShiftRouteEnabled(value bool) {
 	m.patches = append(m.patches, jsonpatch.NewPatch("add", "/spec/gateways", *gateways))
 }
 
-func (m *smcpv2mutator) ConditionallyEnableGatewayAPI(op admissionv1beta1.Operation) {
+func (m *smcpv2mutator) ShouldPatchGatewayAPI(op admissionv1beta1.Operation) bool {
 	isGatewayAPISet := func(spec v2.ControlPlaneSpec) bool {
 		if spec.TechPreview != nil {
 			if rawGatewayAPI, ok, err := spec.TechPreview.GetMap("gatewayAPI"); ok {
@@ -336,9 +340,12 @@ func (m *smcpv2mutator) ConditionallyEnableGatewayAPI(op admissionv1beta1.Operat
 		}
 		return false
 	}
-	if op == admissionv1beta1.Create {
-		if m.smcp.Spec.Mode == v2.ClusterWideMode && !isGatewayAPISet(m.smcp.Spec) {
-			m.patches = append(m.patches, enableGatewayAPI)
-		}
+	if op == admissionv1beta1.Create && m.smcp.Spec.Mode == v2.ClusterWideMode && !isGatewayAPISet(m.smcp.Spec) {
+		return true
 	}
+	return false
+}
+
+func (m *smcpv2mutator) EnableGatewayAPI() {
+	m.patches = append(m.patches, enableGatewayAPI)
 }
