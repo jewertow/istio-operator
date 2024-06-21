@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	featureDisabled = false
-	featureEnabled  = true
+	featureEnabled = true
 )
 
 func TestNoMutation(t *testing.T) {

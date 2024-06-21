@@ -37,6 +37,13 @@ var (
 	_ inject.Client             = (*ControlPlaneMutator)(nil)
 	_ admission.DecoderInjector = (*ControlPlaneMutator)(nil)
 
+	featureDisabled = false
+	disableIOR      = &v2.OpenShiftRouteConfig{
+		Enablement: v2.Enablement{
+			Enabled: &featureDisabled,
+		},
+	}
+
 	enableGatewayAPI = jsonpatch.NewPatch("add", "/spec/techPreview", map[string]interface{}{
 		"gatewayAPI": map[string]interface{}{
 			"enabled": true,
@@ -85,12 +92,8 @@ func (v *ControlPlaneMutator) Handle(ctx context.Context, req admission.Request)
 
 	// As we are deprecating IOR, on creating a v2.5 SMCP we want to disable IOR if not specified explicitly
 	if req.AdmissionRequest.Operation == admissionv1beta1.Create {
-		newOpenShiftRoute := mutator.IsOpenShiftRouteEnabled()
-
-		if newOpenShiftRoute == nil {
-			if err == nil && effectiveVersion.AtLeast(versions.V2_5.Version()) {
-				mutator.SetOpenShiftRouteEnabled(false)
-			}
+		if effectiveVersion.AtLeast(versions.V2_5.Version()) {
+			mutator.DisableIORIfNotSet()
 		}
 	}
 
@@ -174,8 +177,7 @@ type smcpmutator interface {
 	GetProfiles() []string
 	SetProfiles(profiles []string)
 	GetPatches() []jsonpatch.JsonPatchOperation
-	IsOpenShiftRouteEnabled() *bool
-	SetOpenShiftRouteEnabled(bool)
+	DisableIORIfNotSet()
 	EnableGatewayAPIIfNotSet()
 }
 
@@ -236,11 +238,7 @@ func (m *smcpv1mutator) GetProfiles() []string {
 	return m.smcp.Spec.Profiles
 }
 
-func (m *smcpv1mutator) IsOpenShiftRouteEnabled() *bool {
-	return nil
-}
-
-func (m *smcpv1mutator) SetOpenShiftRouteEnabled(_ bool) {}
+func (m *smcpv1mutator) DisableIORIfNotSet() {}
 
 func (m *smcpv1mutator) EnableGatewayAPIIfNotSet() {
 }
@@ -276,38 +274,18 @@ func (m *smcpv2mutator) GetProfiles() []string {
 	return m.smcp.Spec.Profiles
 }
 
-func (m *smcpv2mutator) IsOpenShiftRouteEnabled() *bool {
+func (m *smcpv2mutator) DisableIORIfNotSet() {
 	gateways := m.smcp.Spec.Gateways
-
-	if gateways == nil {
-		return nil
+	if gateways != nil && gateways.OpenShiftRoute != nil {
+		return
 	}
-
-	route := gateways.OpenShiftRoute
-
-	if route == nil {
-		return nil
-	}
-
-	return route.Enabled
-}
-
-func (m *smcpv2mutator) SetOpenShiftRouteEnabled(value bool) {
-	gateways := m.smcp.Spec.Gateways
 
 	if gateways == nil {
 		gateways = &v2.GatewaysConfig{}
 	}
-
-	route := gateways.OpenShiftRoute
-
-	if route == nil {
-		route = &v2.OpenShiftRouteConfig{}
-		gateways.OpenShiftRoute = route
+	if gateways.OpenShiftRoute == nil {
+		gateways.OpenShiftRoute = disableIOR
 	}
-
-	route.Enablement = v2.Enablement{Enabled: &value}
-
 	m.patches = append(m.patches, jsonpatch.NewPatch("add", "/spec/gateways", *gateways))
 }
 
