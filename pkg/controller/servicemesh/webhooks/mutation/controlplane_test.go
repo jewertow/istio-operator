@@ -227,17 +227,53 @@ func TestCreate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mutator := createControlPlaneMutatorTestFixture()
 			response := mutator.Handle(ctx, newCreateRequest(tc.controlPlane()))
-			assert.DeepEquals(response, tc.expectedResponse, "Expected the response to set the version on create", t)
+			assert.DeepEquals(response, tc.expectedResponse, "Unexpected admission response", t)
 		})
 	}
 }
 
-func TestUpgradingToV2_5(t *testing.T) {
-	t.Run("upgrading from v2_4 to default version", func(t *testing.T) {
-		mutator := createControlPlaneMutatorTestFixture()
-		response := mutator.Handle(ctx, newUpdateRequest(newControlPlaneV2_4("istio-system"), newControlPlaneV2("istio-system")))
-		assert.DeepEquals(response, acceptWithNoMutation, "Expected mutator to accept ServiceMeshControlPlane with no mutation", t)
-	})
+func TestUpdate(t *testing.T) {
+	testCases := []struct {
+		name             string
+		oldControlPlane  runtime.Object
+		newControlPlane  runtime.Object
+		expectedResponse admission.Response
+	}{
+		{
+			name:             "upgrading from v2.4 to default version",
+			oldControlPlane:  newControlPlaneV2_4("istio-system"),
+			newControlPlane:  newControlPlaneV2("istio-system"),
+			expectedResponse: admission.Allowed(""),
+		},
+		{
+			name:            "update cluster-wide with default version - gatewayAPI patched",
+			oldControlPlane: newControlPlaneV2("istio-system"),
+			newControlPlane: func() runtime.Object {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				return smcp
+			}(),
+			expectedResponse: admission.Patched("", enableGatewayAPI),
+		},
+		{
+			name:            "update cluster-wide with default version and gatewayAPI disabled - no mutations",
+			oldControlPlane: newControlPlaneV2("istio-system"),
+			newControlPlane: func() runtime.Object {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				setGatewayAPIEnabledValue(&smcp.Spec, true)
+				return smcp
+			}(),
+			expectedResponse: admission.Allowed(""),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mutator := createControlPlaneMutatorTestFixture()
+			response := mutator.Handle(ctx, newUpdateRequest(tc.oldControlPlane, tc.newControlPlane))
+			assert.DeepEquals(response, tc.expectedResponse, "Unexpected admission response", t)
+		})
+	}
 }
 
 func TestVersionIsDefaultedToOldSMCPVersionOnUpdate(t *testing.T) {
