@@ -163,6 +163,16 @@ func TestCreate(t *testing.T) {
 			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),
 		},
 		{
+			name: "default cluster-wide v2.5 - IOR patched",
+			controlPlanes: func() runtime.Object {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				smcp.Spec.Version = versions.V2_5.String()
+				return smcp
+			},
+			expectedResponse: admission.Patched("", iorDisabledPatch),
+		},
+		{
 			name: "cluster-wide and gatewayAPI enabled - IOR patched",
 			controlPlanes: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")

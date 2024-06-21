@@ -66,16 +66,19 @@ func (v *ControlPlaneMutator) Handle(ctx context.Context, req admission.Request)
 	// on create we set the version to the current default version
 	// on update, if the version is removed we reset it to what was previously set
 	currentVersion := mutator.NewVersion()
+	effectiveVersion, _ := versions.ParseVersion(currentVersion)
 	if currentVersion == "" {
 		switch req.AdmissionRequest.Operation {
 		case admissionv1beta1.Create:
 			log.Info("Setting .spec.version to default value", "version", versions.DefaultVersion.String())
 			mutator.SetVersion(mutator.DefaultVersion())
+			effectiveVersion, _ = versions.ParseVersion(mutator.DefaultVersion())
 		case admissionv1beta1.Update:
 			oldVersion := mutator.OldVersion()
 			if currentVersion != oldVersion && oldVersion != versions.InvalidVersion.String() {
 				log.Info("Setting .spec.version to existing value", "version", oldVersion)
 				mutator.SetVersion(oldVersion)
+				effectiveVersion, _ = versions.ParseVersion(oldVersion)
 			}
 		}
 	}
@@ -85,21 +88,15 @@ func (v *ControlPlaneMutator) Handle(ctx context.Context, req admission.Request)
 		newOpenShiftRoute := mutator.IsOpenShiftRouteEnabled()
 
 		if newOpenShiftRoute == nil {
-			var ver versions.Version
-			var err error
-			// If version is not specified
-			if currentVersion == "" {
-				ver, err = versions.ParseVersion(mutator.DefaultVersion())
-			} else {
-				ver, err = versions.ParseVersion(currentVersion)
-			}
-			if err == nil && ver.AtLeast(versions.V2_5.Version()) {
+			if err == nil && effectiveVersion.AtLeast(versions.V2_5.Version()) {
 				mutator.SetOpenShiftRouteEnabled(false)
 			}
 		}
 	}
 
-	mutator.ConditionallyEnableGatewayAPI(req.AdmissionRequest.Operation)
+	if effectiveVersion.AtLeast(versions.V2_6) {
+		mutator.ConditionallyEnableGatewayAPI(req.AdmissionRequest.Operation)
+	}
 
 	if len(mutator.GetProfiles()) == 0 {
 		log.Info("Setting .spec.profiles to default value", "profiles", []string{v1.DefaultTemplate})
