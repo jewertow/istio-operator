@@ -28,9 +28,6 @@ var (
 var (
 	acceptWithNoMutation        = admission.Allowed("")
 	acceptV2WithDefaultMutation = admission.Patched("", defaultVersionPatch, iorDisabledPatch, defaultTemplatePatch)
-	acceptV1WithDefaultMutation = admission.Patched("",
-		jsonpatch.NewPatch("add", "/spec/version", versions.V1_1.String()),
-		jsonpatch.NewPatch("add", "/spec/profiles", []interface{}{v1.DefaultTemplate}))
 
 	defaultVersionPatch  = jsonpatch.NewPatch("add", "/spec/version", versions.DefaultVersion.String())
 	defaultTemplatePatch = jsonpatch.NewPatch("add", "/spec/profiles", []interface{}{v1.DefaultTemplate})

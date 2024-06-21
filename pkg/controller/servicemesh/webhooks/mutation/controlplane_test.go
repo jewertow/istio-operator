@@ -15,9 +15,7 @@ import (
 	"github.com/maistra/istio-operator/pkg/controller/versions"
 )
 
-var (
-	featureEnabled = true
-)
+var featureEnabled = true
 
 func TestNoMutation(t *testing.T) {
 	testCases := []struct {
@@ -456,16 +454,6 @@ func newControlPlaneV1(namespace string) *maistrav1.ServiceMeshControlPlane {
 	}
 }
 
-func newEmptyControlPlaneV1(namespace string) *maistrav1.ServiceMeshControlPlane {
-	return &maistrav1.ServiceMeshControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-smcp",
-			Namespace: namespace,
-		},
-		Spec: maistrav1.ControlPlaneSpec{},
-	}
-}
-
 func newControlPlaneV2(namespace string) *maistrav2.ServiceMeshControlPlane {
 	return &maistrav2.ServiceMeshControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -518,18 +506,4 @@ func setGatewayAPIEnabledValue(spec *maistrav2.ControlPlaneSpec, value interface
 			"enabled": value,
 		},
 	})
-}
-
-func enabledGatewayAPIEnvs(spec *maistrav2.ControlPlaneSpec) {
-	spec.Runtime = &maistrav2.ControlPlaneRuntimeConfig{
-		Components: map[maistrav2.ControlPlaneComponentName]*maistrav2.ComponentRuntimeConfig{
-			maistrav2.ControlPlaneComponentNamePilot: {
-				Container: &maistrav2.ContainerConfig{
-					Env: map[string]string{
-						"PILOT_ENABLE_GATEWAY_API": "true",
-					},
-				},
-			},
-		},
-	}
 }
