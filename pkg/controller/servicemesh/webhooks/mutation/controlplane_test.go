@@ -193,11 +193,21 @@ func TestCreate(t *testing.T) {
 			expectedResponse: admission.Patched("", iorDisabledPatch),
 		},
 		{
-			name: "cluster-wide enabled and gatewayAPI has wrong value - IOR and gatewayAPI patched",
+			name: "cluster-wide enabled and gatewayAPI.enabled has wrong type - IOR and gatewayAPI patched",
 			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, "false")
+				return smcp
+			},
+			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),
+		},
+		{
+			name: "cluster-wide enabled and gatewayAPI has wrong type - IOR and gatewayAPI patched",
+			controlPlane: func() runtime.Object {
+				smcp := newControlPlaneV2("istio-system")
+				smcp.Spec.Mode = maistrav2.ClusterWideMode
+				smcp.Spec.TechPreview = maistrav1.NewHelmValues(map[string]interface{}{"gatewayAPI": true})
 				return smcp
 			},
 			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),

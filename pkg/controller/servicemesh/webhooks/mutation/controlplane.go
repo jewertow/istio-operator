@@ -316,7 +316,8 @@ func (m *smcpv2mutator) SetOpenShiftRouteEnabled(value bool) {
 func (m *smcpv2mutator) ShouldPatchGatewayAPI(op admissionv1beta1.Operation) bool {
 	isGatewayAPISet := func(spec v2.ControlPlaneSpec) bool {
 		if spec.TechPreview != nil {
-			if rawGatewayAPI, ok, err := spec.TechPreview.GetMap("gatewayAPI"); ok {
+			// ignore error - if techPreview.gatewayAPI has wrong type, we still need to check PILOT_ENABLE_GATEWAY_API
+			if rawGatewayAPI, ok, _ := spec.TechPreview.GetMap("gatewayAPI"); ok {
 				for k, v := range rawGatewayAPI {
 					if k == "enabled" {
 						if _, ok := v.(bool); ok {
@@ -324,8 +325,6 @@ func (m *smcpv2mutator) ShouldPatchGatewayAPI(op admissionv1beta1.Operation) boo
 						}
 					}
 				}
-			} else if err != nil {
-				return false
 			}
 		}
 		if spec.Runtime != nil && spec.Runtime.Components != nil {
