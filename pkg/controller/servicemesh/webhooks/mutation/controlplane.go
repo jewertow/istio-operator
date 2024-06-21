@@ -36,6 +36,12 @@ var (
 	_ admission.Handler         = (*ControlPlaneMutator)(nil)
 	_ inject.Client             = (*ControlPlaneMutator)(nil)
 	_ admission.DecoderInjector = (*ControlPlaneMutator)(nil)
+
+	enableGatewayAPI = jsonpatch.NewPatch("add", "/spec/techPreview", map[string]interface{}{
+		"gatewayAPI": map[string]interface{}{
+			"enabled": true,
+		},
+	})
 )
 
 func (v *ControlPlaneMutator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -325,7 +331,7 @@ func (m *smcpv2mutator) ConditionallyEnableGatewayAPI(op admissionv1beta1.Operat
 	}
 	if op == admissionv1beta1.Create {
 		if m.smcp.Spec.Mode == v2.ClusterWideMode && !isGatewayAPISet(m.smcp.Spec) {
-			m.patches = append(m.patches, jsonpatch.NewPatch("add", "/spec/techPreview/gatewayAPI/enabled", true))
+			m.patches = append(m.patches, enableGatewayAPI)
 		}
 	}
 }

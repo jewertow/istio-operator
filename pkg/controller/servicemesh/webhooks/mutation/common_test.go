@@ -27,21 +27,20 @@ var (
 
 var (
 	acceptWithNoMutation        = admission.Allowed("")
-	acceptV2WithDefaultMutation = admission.Patched("",
-		jsonpatch.NewPatch("add", "/spec/version", versions.DefaultVersion.String()),
-		jsonpatch.NewPatch("add", "/spec/gateways",
-			v2.GatewaysConfig{
-				OpenShiftRoute: &v2.OpenShiftRouteConfig{
-					Enablement: v2.Enablement{
-						Enabled: &featureDisabled,
-					},
-				},
-			}),
-		jsonpatch.NewPatch("add", "/spec/profiles", []interface{}{v1.DefaultTemplate}),
-	)
+	acceptV2WithDefaultMutation = admission.Patched("", defaultVersionPatch, iorDisabledPatch, defaultTemplatePatch)
 	acceptV1WithDefaultMutation = admission.Patched("",
 		jsonpatch.NewPatch("add", "/spec/version", versions.V1_1.String()),
 		jsonpatch.NewPatch("add", "/spec/profiles", []interface{}{v1.DefaultTemplate}))
+
+	defaultVersionPatch  = jsonpatch.NewPatch("add", "/spec/version", versions.DefaultVersion.String())
+	defaultTemplatePatch = jsonpatch.NewPatch("add", "/spec/profiles", []interface{}{v1.DefaultTemplate})
+	iorDisabledPatch     = jsonpatch.NewPatch("add", "/spec/gateways", v2.GatewaysConfig{
+		OpenShiftRoute: &v2.OpenShiftRouteConfig{
+			Enablement: v2.Enablement{
+				Enabled: &featureDisabled,
+			},
+		},
+	})
 )
 
 func newCreateRequest(obj runtime.Object) admission.Request {
