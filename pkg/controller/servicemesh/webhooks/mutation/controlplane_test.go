@@ -124,14 +124,12 @@ func TestNoMutation(t *testing.T) {
 func TestCreate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		controlPlane     func() runtime.Object
+		controlPlane     runtime.Object
 		expectedResponse admission.Response
 	}{
 		{
-			name: "v2.4 and default profile - no mutations",
-			controlPlane: func() runtime.Object {
-				return newControlPlaneV2_4("istio-system")
-			},
+			name:             "v2.4 and default profile - no mutations",
+			controlPlane:     newControlPlaneV2_4("istio-system"),
 			expectedResponse: admission.Allowed(""),
 		},
 		{
@@ -142,14 +140,12 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Profiles = []string{maistrav1.DefaultTemplate}
 				enableIOR(&smcp.Spec)
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Allowed(""),
 		},
 		{
-			name: "empty - version and template patched",
-			controlPlane: func() runtime.Object {
-				return newEmptyControlPlaneV2("istio-system")
-			},
+			name:             "empty - version and template patched",
+			controlPlane:     newEmptyControlPlaneV2("istio-system"),
 			expectedResponse: acceptV2WithDefaultMutation,
 		},
 		{
@@ -158,7 +154,7 @@ func TestCreate(t *testing.T) {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),
 		},
 		{
@@ -168,7 +164,7 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				smcp.Spec.Version = versions.V2_5.String()
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch),
 		},
 		{
@@ -178,7 +174,7 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, true)
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch),
 		},
 		{
@@ -188,7 +184,7 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, false)
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch),
 		},
 		{
@@ -198,7 +194,7 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, "false")
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),
 		},
 		{
@@ -208,7 +204,7 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				smcp.Spec.TechPreview = maistrav1.NewHelmValues(map[string]interface{}{"gatewayAPI": true})
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),
 		},
 		{
@@ -218,14 +214,14 @@ func TestCreate(t *testing.T) {
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				enabledGatewayAPIEnvs(&smcp.Spec)
 				return smcp
-			},
+			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mutator := createControlPlaneMutatorTestFixture()
-			response := mutator.Handle(ctx, newCreateRequest(tc.controlPlane()))
+			response := mutator.Handle(ctx, newCreateRequest(tc.controlPlane))
 			assert.DeepEquals(response, tc.expectedResponse, "Unexpected admission response", t)
 		})
 	}
