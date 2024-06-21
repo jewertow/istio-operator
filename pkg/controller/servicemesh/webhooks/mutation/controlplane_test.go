@@ -125,19 +125,19 @@ func TestNoMutation(t *testing.T) {
 func TestCreate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		controlPlanes    func() runtime.Object
+		controlPlane     func() runtime.Object
 		expectedResponse admission.Response
 	}{
 		{
 			name: "v2.4 and default profile - no mutations",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				return newControlPlaneV2_4("istio-system")
 			},
 			expectedResponse: admission.Allowed(""),
 		},
 		{
 			name: "current version, default profile and IOR enabled - no mutations",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newEmptyControlPlaneV2("istio-system")
 				smcp.Spec.Version = versions.DefaultVersion.String()
 				smcp.Spec.Profiles = []string{maistrav1.DefaultTemplate}
@@ -148,14 +148,14 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "empty - version and template patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				return newEmptyControlPlaneV2("istio-system")
 			},
 			expectedResponse: acceptV2WithDefaultMutation,
 		},
 		{
 			name: "default cluster-wide - IOR and gatewayAPI patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				return smcp
@@ -164,7 +164,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "default cluster-wide v2.5 - IOR patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				smcp.Spec.Version = versions.V2_5.String()
@@ -174,7 +174,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "cluster-wide and gatewayAPI enabled - IOR patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, true)
@@ -184,7 +184,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "cluster-wide enabled and gatewayAPI disabled - IOR patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, false)
@@ -194,7 +194,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "cluster-wide enabled and gatewayAPI has wrong value - IOR and gatewayAPI patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				setGatewayAPIEnabledValue(&smcp.Spec, "false")
@@ -204,7 +204,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "cluster-wide enabled and PILOT_ENABLE_GATEWAY_API enabled - IOR patched",
-			controlPlanes: func() runtime.Object {
+			controlPlane: func() runtime.Object {
 				smcp := newControlPlaneV2("istio-system")
 				smcp.Spec.Mode = maistrav2.ClusterWideMode
 				enabledGatewayAPIEnvs(&smcp.Spec)
@@ -215,9 +215,8 @@ func TestCreate(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			controlPlane := tc.controlPlanes()
 			mutator := createControlPlaneMutatorTestFixture()
-			response := mutator.Handle(ctx, newCreateRequest(controlPlane))
+			response := mutator.Handle(ctx, newCreateRequest(tc.controlPlane()))
 			assert.DeepEquals(response, tc.expectedResponse, "Expected the response to set the version on create", t)
 		})
 	}
