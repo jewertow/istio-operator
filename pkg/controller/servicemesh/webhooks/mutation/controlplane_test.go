@@ -207,16 +207,6 @@ func TestCreate(t *testing.T) {
 			}(),
 			expectedResponse: admission.Patched("", iorDisabledPatch, enableGatewayAPI),
 		},
-		{
-			name: "cluster-wide enabled and PILOT_ENABLE_GATEWAY_API enabled - IOR patched",
-			controlPlane: func() runtime.Object {
-				smcp := newControlPlaneV2("istio-system")
-				smcp.Spec.Mode = maistrav2.ClusterWideMode
-				enabledGatewayAPIEnvs(&smcp.Spec)
-				return smcp
-			}(),
-			expectedResponse: admission.Patched("", iorDisabledPatch),
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

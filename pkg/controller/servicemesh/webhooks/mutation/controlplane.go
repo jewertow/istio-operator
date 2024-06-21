@@ -303,16 +303,6 @@ func (m *smcpv2mutator) EnableGatewayAPIIfNotSet() {
 				}
 			}
 		}
-		if spec.Runtime != nil && spec.Runtime.Components != nil {
-			if pilot, found := spec.Runtime.Components[v2.ControlPlaneComponentNamePilot]; found {
-				if pilot == nil || pilot.Container == nil || pilot.Container.Env == nil {
-					return false
-				}
-				if _, found := pilot.Container.Env["PILOT_ENABLE_GATEWAY_API"]; found {
-					return true
-				}
-			}
-		}
 		return false
 	}
 	if m.smcp.Spec.Mode == v2.ClusterWideMode && !isGatewayAPISet(m.smcp.Spec) {
