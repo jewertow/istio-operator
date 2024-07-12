@@ -465,7 +465,7 @@ func (v *versionStrategyV2_6) Render(ctx context.Context, cr *common.ControllerR
 	// Enable FIPS automatically if necessary
 	data, err := ioutil.ReadFile("/proc/sys/crypto/fips_enabled")
 	if err != nil {
-		return nil, fmt.Errorf("could not read file /proc/sys/crypto/fips_enabled: %v", err)
+		log.V(2).Info(fmt.Sprintf("failed to read file /proc/sys/crypto/fips_enabled: %v", err))
 	}
 	if string(data) == "1" {
 		err = spec.Istio.SetField("global.fipsEnabled", true)
