@@ -3,6 +3,7 @@ package versions
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"path"
 	"reflect"
@@ -459,6 +460,18 @@ func (v *versionStrategyV2_6) Render(ctx context.Context, cr *common.ControllerR
 	err = spec.Istio.SetField("meshConfig.ingressControllerMode", "OFF")
 	if err != nil {
 		return nil, fmt.Errorf("could not set field meshConfig.ingressControllerMode: %v", err)
+	}
+
+	// Enable FIPS automatically if necessary
+	data, err := ioutil.ReadFile("/proc/sys/crypto/fips_enabled")
+	if err != nil {
+		return nil, fmt.Errorf("could not read file /proc/sys/crypto/fips_enabled: %v", err)
+	}
+	if string(data) == "1" {
+		err = spec.Istio.SetField("global.fipsEnabled", true)
+		if err != nil {
+			return nil, fmt.Errorf("could not set value istio.global.fipsEnabled: %v", err)
+		}
 	}
 
 	// XXX: using values.yaml settings, as things may have been overridden in profiles/templates

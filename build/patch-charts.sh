@@ -244,6 +244,10 @@ function patchGalley() {
             value: "false"\
           - name: PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER\
             value: "false"\
+{{- end }}\
+{{- if .Values.global.fipsEnabled }}\
+          - name: COMPLIANCE_POLICY\
+            value: "fips-140-2"\
 {{- end }}' "${deployment}"
 
   sed_wrap -i -e '/base:/ i\
